@@ -29,6 +29,10 @@ class TrustBreakdown(BaseModel):
     identity_score: float
     behavior_score: float
     trust_score: float
+    # behavior_score's inputs at the agent-summary level (merchant.py) — same fields as
+    # ScoreBreakdown, kept optional since a brand-new agent has no order history yet.
+    reputation_score: Optional[float] = None
+    reputation_orders: Optional[str] = None
 
 
 class IdentifyResponse(BaseModel):
@@ -54,6 +58,10 @@ class ScoreBreakdown(BaseModel):
     behavior_score: float
     commercial_validity_score: Optional[float] = None
     payment_authority_score: Optional[float] = None
+    # behavior_score's inputs, surfaced so the dashboard can show *why*: a Wilson-score
+    # reputation over the agent's own resolved order history (None = no track record yet).
+    reputation_score: Optional[float] = None
+    reputation_orders: Optional[str] = None  # e.g. "3/4 past orders succeeded"
     live_trust_score: Optional[float] = None
 
 

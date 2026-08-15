@@ -7,9 +7,10 @@ components, each 0-100 (or None where excluded):
                                Frozen into the session token at /identify.
   - identity_score:           credential signature validity + issuer reputation.
                                Frozen into the session token at /identify.
-  - behavior_score:           request velocity (repeat /identify attempts penalised).
-                               Live — read fresh off the Agent row at every stage,
-                               not frozen into the token.
+  - behavior_score:           request velocity (repeat /identify attempts penalised),
+                               blended with reputation_score once the agent has order
+                               history (score_reputation). Live — recomputed at every
+                               stage, not frozen into the token.
   - commercial_validity_score: does the checkout content itself hold up (currently:
                                does the agent's believed price match the catalog)?
                                Computed live at /checkout, carried into /authorise.
@@ -106,6 +107,57 @@ def score_identity(credential: str, issuer: str | None) -> float:
 def score_behavior(identify_count_in_window: int) -> float:
     penalty = max(0, identify_count_in_window - 1) * IDENTIFY_VELOCITY_PENALTY
     return clamp(100 - penalty, IDENTIFY_VELOCITY_FLOOR, 100)
+
+
+REPUTATION_Z = 1.96  # 95% confidence
+
+# What counts as a reputation "trial" is deliberately narrow, not "every order this
+# agent ever touched":
+#   - "blocked" orders (checkout-stage denial, whether insufficient_trust or
+#     commercial_validity_failure) never became a real transaction attempt — excluded
+#     entirely, not counted as a failure. A prompt-injected checkout isn't necessarily
+#     evidence the *agent* is untrustworthy going forward.
+#   - "failed" orders are, by construction in this codebase (see authorise.py), always
+#     a StraitsXError — infra-side, never the agent's fault. Same principle as
+#     score_payment_authority: excluded, not counted as a failure.
+#   - Only "completed" orders are trials at all. Within those, a *clean* completion
+#     (never needed a merchant override to get past /checkout) counts as success; one
+#     that only completed after a human manually overrode a block is a trial but not a
+#     success — the merchant override is the one real labeled outcome this system has
+#     for "this agent's unassisted request wasn't actually trustworthy."
+# See app.deps.agent_order_history for the query that applies this.
+
+
+def score_reputation(successes: int, total: int) -> float | None:
+    """Wilson score interval lower bound over this agent's own resolved order history —
+    the same estimator Reddit uses to rank comments by confidence, not a hand-picked
+    heuristic. Unlike a plain success rate, it stays conservative under a thin sample
+    (1 success out of 1 order scores far below 100; 40 out of 50 scores solidly high),
+    so an agent can't buy a perfect reputation with a single lucky order.
+
+    Returns None for an agent with zero resolved orders — no track record to score, so
+    callers should skip blending this in rather than defaulting to a number that would
+    misrepresent "we don't know yet" as "average."
+    """
+    if total == 0:
+        return None
+    z = REPUTATION_Z
+    phat = successes / total
+    denominator = 1 + z * z / total
+    center = phat + z * z / (2 * total)
+    margin = z * ((phat * (1 - phat) + z * z / (4 * total)) / total) ** 0.5
+    lower_bound = (center - margin) / denominator
+    return round(clamp(lower_bound * 100), 1)
+
+
+def blend_behavior_score(velocity_score: float, reputation_score: float | None) -> float:
+    """behavior_score for a brand-new agent (no order history) is velocity alone —
+    identical to pre-reputation behavior, so nothing already-demoed regresses. Once an
+    agent has a track record, blend in reputation so the number reflects earned
+    behaviour across the whole relationship, not just this session's request pattern."""
+    if reputation_score is None:
+        return velocity_score
+    return round(clamp(velocity_score * 0.5 + reputation_score * 0.5), 1)
 
 
 def score_commercial_validity(catalog_price_sgd: float, expected_price_sgd: float | None) -> tuple[float, str | None]:

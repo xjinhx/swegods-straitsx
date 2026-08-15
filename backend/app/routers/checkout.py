@@ -9,12 +9,18 @@ from sqlmodel import Session
 from app.audit import log_event
 from app.config import MAX_CARD_AMOUNT_SGD, MERCHANT_NAME, MIN_CARD_AMOUNT_SGD
 from app.database import get_session
-from app.deps import get_agent_session
+from app.deps import agent_order_history, get_agent_session
 from app.models import Order, Product
 from app.rules import evaluate
 from app.schemas import CheckoutRequest, CheckoutResponse, ScoreBreakdown
 from app.straitsx_client import new_order_id
-from app.trust import COMMERCIAL_VALIDITY_GATE, blend_checkout_score, score_commercial_validity
+from app.trust import (
+    COMMERCIAL_VALIDITY_GATE,
+    blend_behavior_score,
+    blend_checkout_score,
+    score_commercial_validity,
+    score_reputation,
+)
 
 router = APIRouter(tags=["checkout"])
 
@@ -43,10 +49,13 @@ def checkout(payload: CheckoutRequest, session: Session = Depends(get_session)):
     commercial_validity_score, commercial_reason = score_commercial_validity(
         product.price_sgd, payload.expected_price_sgd
     )
+    successes, total_resolved = agent_order_history(session, agent.agent_id)
+    reputation_score = score_reputation(successes, total_resolved)
+    behavior_score = blend_behavior_score(agent.behavior_score, reputation_score)
     live_trust_score = blend_checkout_score(
         identity_score=agent_session.identity_score,
         mandate_scope_score=agent_session.mandate_scope_score,
-        behavior_score=agent.behavior_score,
+        behavior_score=behavior_score,
         commercial_validity_score=commercial_validity_score,
     )
 
@@ -92,8 +101,10 @@ def checkout(payload: CheckoutRequest, session: Session = Depends(get_session)):
     score_breakdown = ScoreBreakdown(
         identity_score=agent_session.identity_score,
         mandate_scope_score=agent_session.mandate_scope_score,
-        behavior_score=agent.behavior_score,
+        behavior_score=behavior_score,
         commercial_validity_score=commercial_validity_score,
+        reputation_score=reputation_score,
+        reputation_orders=f"{successes}/{total_resolved} past orders succeeded" if total_resolved else None,
         live_trust_score=live_trust_score,
     )
 

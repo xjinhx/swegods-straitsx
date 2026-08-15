@@ -8,10 +8,24 @@ from sqlmodel import Session, select
 
 from app.audit import log_event
 from app.database import get_session
+from app.deps import agent_order_history
 from app.models import Agent, MerchantRule, Order
 from app.schemas import OrderOut, OverrideRequest, RuleIn, RuleOut, TrustBreakdown
+from app.trust import blend_behavior_score, score_reputation
 
 router = APIRouter(prefix="/merchant", tags=["merchant"])
+
+
+def _live_behavior(session: Session, agent: Agent) -> tuple[float, float | None, str | None]:
+    """(blended behavior_score, reputation_score, reputation_orders) for the
+    agent-summary views — same live computation checkout.py/authorise.py use, so the
+    dashboard's per-agent panel shows the same number those decisions were actually
+    made against, not the stale velocity-only value frozen at /identify."""
+    successes, total = agent_order_history(session, agent.agent_id)
+    reputation_score = score_reputation(successes, total)
+    behavior_score = blend_behavior_score(agent.behavior_score, reputation_score)
+    reputation_orders = f"{successes}/{total} past orders succeeded" if total else None
+    return behavior_score, reputation_score, reputation_orders
 
 
 @router.get("/agents/{agent_id}/trust", response_model=TrustBreakdown)
@@ -19,32 +33,38 @@ def agent_trust(agent_id: str, session: Session = Depends(get_session)):
     agent = session.get(Agent, agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="agent not found")
+    behavior_score, reputation_score, reputation_orders = _live_behavior(session, agent)
     return TrustBreakdown(
         mandate_scope_score=agent.mandate_scope_score,
         identity_score=agent.identity_score,
-        behavior_score=agent.behavior_score,
+        behavior_score=behavior_score,
         trust_score=agent.trust_score,
+        reputation_score=reputation_score,
+        reputation_orders=reputation_orders,
     )
 
 
 @router.get("/agents")
 def list_agents(session: Session = Depends(get_session)):
     agents = session.exec(select(Agent).order_by(Agent.last_identify_at.desc())).all()
-    return [
-        {
+    out = []
+    for a in agents:
+        behavior_score, reputation_score, reputation_orders = _live_behavior(session, a)
+        out.append({
             "agent_id": a.agent_id,
             "name": a.name,
             "trust_score": a.trust_score,
             "mandate_scope_score": a.mandate_scope_score,
             "identity_score": a.identity_score,
-            "behavior_score": a.behavior_score,
+            "behavior_score": behavior_score,
+            "reputation_score": reputation_score,
+            "reputation_orders": reputation_orders,
             "spend_cap_sgd": a.spend_cap_sgd,
             "merchant_whitelist": a.merchant_whitelist,
             "identify_count": a.identify_count,
             "last_identify_at": a.last_identify_at.isoformat() + "Z",
-        }
-        for a in agents
-    ]
+        })
+    return out
 
 
 @router.get("/orders", response_model=list[OrderOut])

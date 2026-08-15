@@ -12,6 +12,7 @@ const SCORE_ROWS = [
   { key: "identity_score", label: "Identity" },
   { key: "mandate_scope_score", label: "Mandate scope" },
   { key: "behavior_score", label: "Behaviour" },
+  { key: "reputation_score", label: "Reputation" },
   { key: "commercial_validity_score", label: "Commercial validity" },
   { key: "payment_authority_score", label: "Payment authority" },
 ];
@@ -67,6 +68,7 @@ watch(() => props.orderId, load, { immediate: true });
             <span class="bar-value tabular">{{ Math.round(ev.detail[row.key]) }}</span>
           </div>
         </div>
+        <p v-if="ev.detail.reputation_orders" class="reputation">{{ ev.detail.reputation_orders }} (Wilson score, 95% CI)</p>
         <p v-if="ev.detail.denial_reason" class="denial">denial_reason: {{ ev.detail.denial_reason }}</p>
       </li>
     </ol>
@@ -108,4 +110,5 @@ watch(() => props.orderId, load, { immediate: true });
 .bar-fill.warn { background: var(--warn); }
 .bar-value { font-size: 0.74rem; text-align: right; color: var(--ink-muted); }
 .denial { margin: 0.2rem 0 0; font-size: 0.76rem; color: var(--warn); font-family: var(--mono); }
+.reputation { margin: 0.2rem 0 0; font-size: 0.76rem; color: var(--ink-faint); font-family: var(--mono); }
 </style>
