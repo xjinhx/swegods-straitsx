@@ -57,8 +57,8 @@ def list_orders(session: Session = Depends(get_session)):
             order_id=o.order_id, agent_id=o.agent_id, agent_name=agent.name if agent else "unknown",
             sku=o.sku, product_name=o.product_name, category=o.category, amount_sgd=o.amount_sgd,
             status=o.status, reason=o.reason, trust_score_at_checkout=o.trust_score_at_checkout,
-            required_trust=o.required_trust, settlement_tx=o.settlement_tx,
-            created_at=o.created_at.isoformat() + "Z",
+            required_trust=o.required_trust, commercial_validity_score=o.commercial_validity_score,
+            settlement_tx=o.settlement_tx, created_at=o.created_at.isoformat() + "Z",
         ))
     return out
 

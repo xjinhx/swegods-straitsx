@@ -42,15 +42,30 @@ class CheckoutRequest(BaseModel):
     session_token: str
     sku: str
     quantity: int = 1
+    # What the agent believes the price is (e.g. from a product page read earlier, or a
+    # prompt-injected instruction) — optional; omitted means no assertion to check.
+    # Compared against the live catalog price by commercial_validity_score.
+    expected_price_sgd: Optional[float] = None
+
+
+class ScoreBreakdown(BaseModel):
+    identity_score: float
+    mandate_scope_score: float
+    behavior_score: float
+    commercial_validity_score: Optional[float] = None
+    payment_authority_score: Optional[float] = None
+    live_trust_score: Optional[float] = None
 
 
 class CheckoutResponse(BaseModel):
     order_id: str
     status: str
     reason: Optional[str] = None
+    denial_reason: Optional[str] = None  # "commercial_validity_failure" | "insufficient_trust"
     amount_sgd: float
     trust_score: float
     required_trust: float
+    score_breakdown: Optional[ScoreBreakdown] = None
 
 
 class AuthoriseRequest(BaseModel):
@@ -65,6 +80,8 @@ class AuthoriseResponse(BaseModel):
     card_id: Optional[str] = None
     receipt_url: Optional[str] = None
     reason: Optional[str] = None
+    denial_reason: Optional[str] = None  # "straitsx_error" when payment_authority_score is None
+    score_breakdown: Optional[ScoreBreakdown] = None
 
 
 class ReceiptOut(BaseModel):
@@ -116,5 +133,6 @@ class OrderOut(BaseModel):
     reason: Optional[str]
     trust_score_at_checkout: float
     required_trust: float
+    commercial_validity_score: float
     settlement_tx: Optional[str]
     created_at: str
