@@ -16,6 +16,18 @@ function meta(category) {
   return CATEGORY_META[category] || FALLBACK;
 }
 
+// Drop an image named after a product's SKU (e.g. assets/products/sku-1001.png)
+// for a per-product photo, or after a category (e.g. assets/products/home.png)
+// as a shared fallback — see assets/products/README.md.
+const productImages = Object.fromEntries(
+  Object.entries(import.meta.glob("../assets/products/*.{png,jpg,jpeg,webp,svg}", { eager: true, import: "default" }))
+    .map(([path, url]) => [path.match(/([^/]+)\.[^.]+$/)[1].toLowerCase(), url])
+);
+
+function image(p) {
+  return productImages[p.sku.toLowerCase()] || productImages[p.category] || productImages.fallback || null;
+}
+
 const activeCategory = ref("all");
 const categories = computed(() => ["all", ...new Set(props.products.map((p) => p.category))]);
 const filtered = computed(() =>
@@ -41,9 +53,10 @@ const filtered = computed(() =>
       <article v-for="p in filtered" :key="p.sku" class="card">
         <div
           class="thumb"
-          :style="{ background: `linear-gradient(135deg, ${meta(p.category).from}, ${meta(p.category).to})` }"
+          :style="image(p) ? {} : { background: `linear-gradient(135deg, ${meta(p.category).from}, ${meta(p.category).to})` }"
         >
-          <span class="thumb-emoji">{{ meta(p.category).emoji }}</span>
+          <img v-if="image(p)" class="thumb-img" :src="image(p)" :alt="p.name" />
+          <span v-else class="thumb-emoji">{{ meta(p.category).emoji }}</span>
         </div>
         <div class="body">
           <span class="category">{{ p.category }}</span>
@@ -87,9 +100,10 @@ const filtered = computed(() =>
 }
 
 .thumb {
-  aspect-ratio: 1.4 / 1; display: flex; align-items: center; justify-content: center;
+  aspect-ratio: 1.4 / 1; display: flex; align-items: center; justify-content: center; overflow: hidden;
 }
 .thumb-emoji { font-size: 2.6rem; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.15)); }
+.thumb-img { width: 100%; height: 100%; object-fit: cover; }
 
 .body { padding: 0.8rem 0.9rem 0.95rem; display: flex; flex-direction: column; gap: 0.3rem; flex: 1; }
 
