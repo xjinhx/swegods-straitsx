@@ -3,14 +3,20 @@ import { computed, onMounted, onUnmounted, ref } from "vue";
 import { api } from "../api";
 import ActivityFeed from "../components/ActivityFeed.vue";
 import TrustBreakdown from "../components/TrustBreakdown.vue";
+import OrderTimeline from "../components/OrderTimeline.vue";
 import RuleBuilder from "../components/RuleBuilder.vue";
 
 const orders = ref([]);
 const agents = ref([]);
 const selectedAgentId = ref(null);
+const selectedOrderId = ref(null);
 const overriding = ref(null);
 const copied = ref(false);
 let timer = null;
+
+function toggleOrder(orderId) {
+  selectedOrderId.value = selectedOrderId.value === orderId ? null : orderId;
+}
 
 const STAGES = [
   { key: "discover", label: "Discover", matches: [] },
@@ -103,27 +109,36 @@ async function doOverride(order) {
           <thead>
             <tr>
               <th>Order</th><th>Agent</th><th>Item</th><th>Amount</th>
-              <th>Trust</th><th>Required</th><th>Status</th><th></th>
+              <th>Trust</th><th>Required</th><th>Commercial</th><th>Status</th><th></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="o in orders" :key="o.order_id">
-              <td class="mono">{{ o.order_id }}</td>
-              <td>{{ o.agent_name }}</td>
-              <td>{{ o.product_name }}</td>
-              <td class="tabular">${{ o.amount_sgd.toFixed(2) }}</td>
-              <td class="tabular">{{ Math.round(o.trust_score_at_checkout) }}</td>
-              <td class="tabular">{{ Math.round(o.required_trust) }}</td>
-              <td><span class="pill" :class="o.status">{{ o.status.replace("_", " ") }}</span></td>
-              <td>
-                <button v-if="o.status === 'blocked'" class="primary" :disabled="overriding === o.order_id" @click="doOverride(o)">
-                  {{ overriding === o.order_id ? "Approving…" : "Override" }}
-                </button>
-              </td>
-            </tr>
+            <template v-for="o in orders" :key="o.order_id">
+              <tr class="order-row" @click="toggleOrder(o.order_id)">
+                <td class="mono">{{ o.order_id }}</td>
+                <td>{{ o.agent_name }}</td>
+                <td>{{ o.product_name }}</td>
+                <td class="tabular">${{ o.amount_sgd.toFixed(2) }}</td>
+                <td class="tabular">{{ Math.round(o.trust_score_at_checkout) }}</td>
+                <td class="tabular">{{ Math.round(o.required_trust) }}</td>
+                <td class="tabular" :class="{ warn: o.commercial_validity_score < 50 }">{{ Math.round(o.commercial_validity_score) }}</td>
+                <td><span class="pill" :class="o.status">{{ o.status.replace("_", " ") }}</span></td>
+                <td>
+                  <button v-if="o.status === 'blocked'" class="primary" :disabled="overriding === o.order_id" @click.stop="doOverride(o)">
+                    {{ overriding === o.order_id ? "Approving…" : "Override" }}
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="selectedOrderId === o.order_id" class="timeline-row">
+                <td colspan="9">
+                  <OrderTimeline :order-id="o.order_id" />
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>
+      <p class="hint">Click a row for the per-stage trust score timeline.</p>
       <p v-if="orders.some((o) => o.status === 'blocked')" class="hint">
         Blocked orders stay blocked until an agent tries <code class="mono">/authorise</code> again — overriding
         here doesn't charge the card itself, it just clears the gate.
@@ -145,6 +160,11 @@ async function doOverride(order) {
 }
 .agent-select { width: 100%; margin-bottom: 1rem; }
 .hint { color: var(--ink-faint); font-size: 0.82rem; margin-top: 0.7rem; }
+
+.order-row { cursor: pointer; }
+.order-row:hover { background: var(--surface-2); }
+.order-row td.warn { color: var(--warn); font-weight: 700; }
+.timeline-row td { padding: 0.9rem 0.7rem 1.1rem; background: var(--surface-2); border-radius: 8px; }
 
 .cmd-row { display: flex; gap: 0.6rem; align-items: center; margin-top: 0.6rem; }
 .cmd { background: var(--surface-2); padding: 0.55rem 0.8rem; border-radius: 6px; flex: 1; font-size: 0.85rem; overflow-x: auto; }

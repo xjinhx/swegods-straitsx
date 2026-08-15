@@ -2,22 +2,30 @@ from dataclasses import dataclass
 
 import jwt
 from fastapi import HTTPException
-from sqlmodel import Session
+from sqlmodel import Session, select
 
-from app.models import Agent
+from app.models import Agent, AuditEvent, Order
 from app.schemas import Mandate
 from app.security import decode_session_claims
 
 
 @dataclass
 class AgentSession:
-    """An authenticated request's agent identity, plus the mandate and trust score
-    that were frozen into the session token at /identify time — not the agent's
+    """An authenticated request's agent identity, plus the mandate and identity/mandate
+    scores that were frozen into the session token at /identify time — not the agent's
     current (possibly since-changed) values, so a token can't inherit a mandate it
-    was never issued under."""
+    was never issued under.
+
+    identity_score and mandate_scope_score stay frozen (PRD-trust-score-v2): they
+    answer "who is this agent", which shouldn't change mid-session. behavior_score is
+    deliberately NOT exposed here — it's live now, read fresh off the Agent row by
+    whoever needs it (checkout.py/authorise.py), not frozen into the token.
+    """
     agent: Agent
     mandate: Mandate
-    trust_score: float
+    identity_score: float
+    mandate_scope_score: float
+    trust_score: float  # the identify-stage blend (identity+mandate only) — see trust.py
 
 
 def get_agent_session(session: Session, token: str) -> AgentSession:
@@ -32,8 +40,39 @@ def get_agent_session(session: Session, token: str) -> AgentSession:
     if not agent:
         raise HTTPException(status_code=401, detail="unknown agent")
 
+    trust = claims["trust"]
     return AgentSession(
         agent=agent,
         mandate=Mandate(**claims["mandate"]),
-        trust_score=claims["trust"]["trust_score"],
+        identity_score=trust["identity_score"],
+        mandate_scope_score=trust["mandate_scope_score"],
+        trust_score=trust["trust_score"],
     )
+
+
+def agent_order_history(session: Session, agent_id: str) -> tuple[int, int]:
+    """(successes, total) over this agent's *completed* orders only, for
+    trust.score_reputation — see the comment above REPUTATION_Z in trust.py for why
+    "blocked" and "failed" orders are excluded entirely rather than counted as
+    failures. Within completed orders, one that needed a merchant override to get past
+    /checkout in the first place counts toward `total` but not `successes` — the
+    override is the one real labeled "this wasn't actually trustworthy" signal this
+    system has.
+
+    Queried fresh on every call (not cached on the Agent row) so an order resolved
+    earlier in the *same* session already counts by the next stage.
+    """
+    completed_order_ids = session.exec(
+        select(Order.order_id).where(Order.agent_id == agent_id, Order.status == "completed")
+    ).all()
+    total = len(completed_order_ids)
+    if total == 0:
+        return 0, 0
+
+    overridden_order_ids = set(session.exec(
+        select(AuditEvent.order_id).where(
+            AuditEvent.order_id.in_(completed_order_ids), AuditEvent.step == "override"
+        )
+    ).all())
+    successes = total - len(overridden_order_ids)
+    return successes, total

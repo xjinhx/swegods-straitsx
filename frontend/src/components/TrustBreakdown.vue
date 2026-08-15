@@ -1,11 +1,18 @@
 <script setup>
-defineProps({ agent: { type: Object, required: true } });
+import { computed } from "vue";
 
-const rows = [
+const props = defineProps({ agent: { type: Object, required: true } });
+
+const ALL_ROWS = [
   { key: "mandate_scope_score", label: "Mandate scope" },
   { key: "identity_score", label: "Identity" },
   { key: "behavior_score", label: "Behaviour" },
+  { key: "reputation_score", label: "Reputation" },
 ];
+
+// reputation_score is null for a brand-new agent with no resolved order history yet —
+// omit the row entirely rather than showing a misleading 0.
+const rows = computed(() => ALL_ROWS.filter((r) => props.agent[r.key] !== undefined && props.agent[r.key] !== null));
 </script>
 
 <template>
@@ -29,6 +36,7 @@ const rows = [
         <span class="bar-value tabular">{{ Math.round(agent[row.key]) }}</span>
       </div>
     </div>
+    <p v-if="agent.reputation_orders" class="reputation-note">{{ agent.reputation_orders }} (Wilson score, 95% CI)</p>
   </div>
 </template>
 
@@ -46,4 +54,5 @@ const rows = [
 .bar-track { height: 6px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
 .bar-fill { height: 100%; background: var(--accent); border-radius: 999px; }
 .bar-value { font-size: 0.8rem; text-align: right; color: var(--ink-muted); }
+.reputation-note { margin: 0; font-size: 0.74rem; color: var(--ink-faint); font-family: var(--mono); }
 </style>

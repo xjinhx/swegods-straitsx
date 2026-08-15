@@ -65,8 +65,9 @@ class Order(SQLModel, table=True):
     status: str = "pending"
     reason: Optional[str] = None
 
-    trust_score_at_checkout: float = 0
+    trust_score_at_checkout: float = 0  # live_trust_score at whichever stage last computed it
     required_trust: float = 0
+    commercial_validity_score: float = 100.0  # computed at /checkout, carried into /authorise's blend
 
     settlement_tx: Optional[str] = None
     card_id: Optional[str] = None
