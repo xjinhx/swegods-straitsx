@@ -1,6 +1,10 @@
 """Central config, read from environment variables (see .env.example)."""
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 MERCHANT_NAME = os.getenv("MERCHANT_NAME", "AgentMart")
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./agentmart.db")
@@ -13,6 +17,17 @@ MOCK_STRAITSX = os.getenv("MOCK_STRAITSX", "true").lower() == "true"
 STRAITSX_PROFILE = os.getenv("STRAITSX_PROFILE", "sandbox")  # "sandbox" | "production"
 STRAITSX_SANDBOX_SSE = "https://card.straitsx.ai/sandbox/sse"
 STRAITSX_PRODUCTION_SSE = "https://card.straitsx.ai/production/sse"
+
+# REST endpoint behind an x402 payment challenge (PRD Section 9.2 discovery finding:
+# the MCP tool itself only returns payment requirements, the actual card issuance is
+# this HTTP call, paid via a signed EIP-3009 TransferWithAuthorization).
+STRAITSX_SANDBOX_CARDAPI = "https://card.straitsx.ai/sandbox/cardapi/issue_card"
+STRAITSX_PRODUCTION_CARDAPI = "https://card.straitsx.ai/production/cardapi/issue_card"
+
+# Wallet that signs the EIP-3009 TransferWithAuthorization paying the x402
+# challenge returned by StraitsX's cardapi.
+STRAITSX_WALLET_ADDRESS = os.getenv("STRAITSX_WALLET_ADDRESS", "")
+STRAITSX_WALLET_PRIVATE_KEY = os.getenv("STRAITSX_WALLET_PRIVATE_KEY", "")
 
 MIN_CARD_AMOUNT_SGD = 5.0
 MAX_CARD_AMOUNT_SGD = 30.0

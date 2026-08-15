@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "straitsx-card-sandbox": {
+      "type": "sse",
+      "url": "https://card.straitsx.ai/sandbox/sse"
+    },
+    "straitsx-card-prod": {
+      "type": "sse",
+      "url": "https://card.straitsx.ai/production/sse"
+    }
+  }
+}
