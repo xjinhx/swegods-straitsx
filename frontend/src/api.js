@@ -15,7 +15,12 @@ async function request(path, options = {}) {
 
 export const api = {
   products: () => request("/products"),
-  activityFeed: (limit = 50) => request(`/activity/feed?limit=${limit}`),
+  activityFeed: ({ limit = 50, sinceId, beforeId } = {}) => {
+    const params = new URLSearchParams({ limit });
+    if (sinceId != null) params.set("since_id", sinceId);
+    if (beforeId != null) params.set("before_id", beforeId);
+    return request(`/activity/feed?${params}`);
+  },
   orders: () => request("/merchant/orders"),
   agents: () => request("/merchant/agents"),
   rules: () => request("/merchant/rules"),
@@ -23,5 +28,7 @@ export const api = {
   deleteRule: (id) => request(`/merchant/rules/${id}`, { method: "DELETE" }),
   override: (orderId, note) =>
     request(`/merchant/orders/${orderId}/override`, { method: "POST", body: JSON.stringify({ note }) }),
+  revokeAgent: (agentId) => request(`/merchant/agents/${agentId}/revoke`, { method: "POST" }),
+  reinstateAgent: (agentId) => request(`/merchant/agents/${agentId}/reinstate`, { method: "POST" }),
   orderAudit: (orderId) => request(`/audit/${orderId}`),
 };

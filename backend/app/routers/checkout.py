@@ -2,7 +2,9 @@
 now runs against a live_trust_score (frozen identity/mandate + live behavior + live
 commercial_validity), not the score frozen at /identify, and commercial_validity_score
 is a hard gate independent of the blend — a tampered checkout can't be bought back by a
-high identity score (Section 5.3)."""
+high identity score (Section 5.3). identity_score gets the same treatment (IDENTITY_GATE)
+— otherwise it's just 30% of the blend, and a credential that fails the shape check
+entirely can still clear the highest price tier on a disciplined-looking mandate alone."""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
@@ -16,6 +18,7 @@ from app.schemas import CheckoutRequest, CheckoutResponse, ScoreBreakdown
 from app.straitsx_client import new_order_id
 from app.trust import (
     COMMERCIAL_VALIDITY_GATE,
+    IDENTITY_GATE,
     blend_behavior_score,
     blend_checkout_score,
     score_commercial_validity,
@@ -60,7 +63,13 @@ def checkout(payload: CheckoutRequest, session: Session = Depends(get_session)):
     )
 
     denial_reason = None
-    if commercial_validity_score < COMMERCIAL_VALIDITY_GATE:
+    if agent_session.identity_score < IDENTITY_GATE:
+        decision_allowed, required_trust, reason = False, 101, (
+            f"identity signal too weak (score {agent_session.identity_score:.0f}) — "
+            "credential does not look like a valid signed token"
+        )
+        denial_reason = "identity_verification_failure"
+    elif commercial_validity_score < COMMERCIAL_VALIDITY_GATE:
         decision_allowed, required_trust, reason = False, 101, commercial_reason
         denial_reason = "commercial_validity_failure"
     elif amount_sgd > mandate.spend_cap_sgd:
@@ -90,6 +99,7 @@ def checkout(payload: CheckoutRequest, session: Session = Depends(get_session)):
         amount_sgd=amount_sgd,
         status="approved" if decision_allowed else "blocked",
         reason=reason,
+        denial_reason=denial_reason,
         trust_score_at_checkout=live_trust_score,
         required_trust=required_trust,
         commercial_validity_score=commercial_validity_score,

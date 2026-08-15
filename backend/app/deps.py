@@ -39,6 +39,8 @@ def get_agent_session(session: Session, token: str) -> AgentSession:
     agent = session.get(Agent, claims["sub"])
     if not agent:
         raise HTTPException(status_code=401, detail="unknown agent")
+    if not agent.key_active:
+        raise HTTPException(status_code=403, detail="agent credential has been revoked")
 
     trust = claims["trust"]
     return AgentSession(

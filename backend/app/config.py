@@ -9,8 +9,13 @@ MERCHANT_NAME = os.getenv("MERCHANT_NAME", "AgentMart")
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./agentmart.db")
 
-JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-me")
-JWT_ALGORITHM = "HS256"
+JWT_ALGORITHM = "EdDSA"
+# Ed25519 keypair AgentMart (the issuer) signs session tokens/receipts with — see
+# app/security.py and scripts/generate_issuer_keypair.py. Asymmetric signing, not a
+# custom cert authority: still "signed JWTs" per the PRD non-goal, just with a
+# public/private keypair instead of a shared HS256 secret.
+ISSUER_PRIVATE_KEY_PATH = os.getenv("ISSUER_PRIVATE_KEY_PATH", "./issuer_private_key.pem")
+ISSUER_PUBLIC_KEY_PATH = os.getenv("ISSUER_PUBLIC_KEY_PATH", "./issuer_public_key.pem")
 
 # StraitsX card-issuing MCP (PRD Section 9). Cards are single-use, 5-30 SGD.
 # Hackathon requirement (docs_folder/developer.md): the final solution must settle in

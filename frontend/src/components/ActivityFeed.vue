@@ -7,22 +7,63 @@ const props = defineProps({
   pollMs: { type: Number, default: 2000 },
 });
 
-const events = ref([]);
+const events = ref([]); // newest-first, same order the feed renders in
 const error = ref(null);
+const hasMore = ref(false); // more history older than what's loaded
+const loadingOlder = ref(false);
 let timer = null;
 
-async function poll() {
+async function initialLoad() {
   try {
-    events.value = await api.activityFeed(props.limit);
+    const res = await api.activityFeed({ limit: props.limit });
+    events.value = res.events;
+    hasMore.value = res.has_more;
     error.value = null;
   } catch (e) {
     error.value = e.message;
   }
 }
 
+// Delta poll: fetch only what's newer than the top-of-feed event and prepend it,
+// instead of re-fetching (and re-rendering) the same top-N window every tick — also
+// what makes this immune to duplicating or dropping rows across polls, unlike
+// re-fetching "the last N" would be under concurrent writes.
+async function pollNew() {
+  if (!events.value.length) return initialLoad();
+  try {
+    const res = await api.activityFeed({ limit: props.limit, sinceId: events.value[0].id });
+    if (res.events.length) events.value = [...res.events, ...events.value];
+    error.value = null;
+  } catch (e) {
+    error.value = e.message;
+  }
+}
+
+// "Load older": paged back from the oldest currently-loaded event, triggered by
+// scrolling the feed's capped-height region toward its bottom.
+async function loadOlder() {
+  if (loadingOlder.value || !hasMore.value || !events.value.length) return;
+  loadingOlder.value = true;
+  try {
+    const oldestId = events.value[events.value.length - 1].id;
+    const res = await api.activityFeed({ limit: props.limit, beforeId: oldestId });
+    events.value = [...events.value, ...res.events];
+    hasMore.value = res.has_more;
+  } catch (e) {
+    error.value = e.message;
+  } finally {
+    loadingOlder.value = false;
+  }
+}
+
+function onScroll(e) {
+  const el = e.target;
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 80) loadOlder();
+}
+
 onMounted(() => {
-  poll();
-  timer = setInterval(poll, props.pollMs);
+  initialLoad();
+  timer = setInterval(pollNew, props.pollMs);
 });
 onUnmounted(() => clearInterval(timer));
 
@@ -51,17 +92,22 @@ function relTime(iso) {
   <div>
     <p v-if="error" class="empty">Couldn't reach the backend: {{ error }}</p>
     <p v-else-if="!events.length" class="empty">No activity yet — run the demo agent to generate some.</p>
-    <ul v-else class="feed">
-      <li v-for="ev in events" :key="ev.id" :class="['feed-row', ev.step]">
-        <span class="feed-step" :class="ev.step">{{ stepLabel[ev.step] || ev.step }}</span>
-        <span class="feed-msg">{{ ev.message }}</span>
-        <span class="feed-time">{{ relTime(ev.timestamp) }}</span>
-      </li>
-    </ul>
+    <div v-else class="feed-scroll" @scroll="onScroll">
+      <ul class="feed">
+        <li v-for="ev in events" :key="ev.id" :class="['feed-row', ev.step]">
+          <span class="feed-step" :class="ev.step">{{ stepLabel[ev.step] || ev.step }}</span>
+          <span class="feed-msg">{{ ev.message }}</span>
+          <span class="feed-time">{{ relTime(ev.timestamp) }}</span>
+        </li>
+      </ul>
+      <p v-if="loadingOlder" class="feed-end">Loading older activity…</p>
+      <p v-else-if="!hasMore" class="feed-end">— start of activity —</p>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.feed-scroll { max-height: 420px; overflow-y: auto; }
 .feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .feed-row {
   display: grid; grid-template-columns: 6.5rem 1fr auto; gap: 0.8rem; align-items: baseline;
@@ -79,4 +125,5 @@ function relTime(iso) {
 .feed-step.override { color: var(--accent-ink); background: var(--accent-soft); }
 .feed-msg { color: var(--ink); }
 .feed-time { color: var(--ink-faint); font-family: var(--mono); font-size: 0.78rem; white-space: nowrap; }
+.feed-end { text-align: center; color: var(--ink-faint); font-size: 0.78rem; padding: 0.7rem 0 0.2rem; margin: 0; }
 </style>

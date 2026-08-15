@@ -57,6 +57,7 @@ async def authorise(payload: AuthoriseRequest, session: Session = Depends(get_se
         payment_authority_score = score_payment_authority(succeeded=False)
         order.status = "failed"
         order.reason = str(e)
+        order.denial_reason = "straitsx_error"
         session.add(order)
         session.commit()
         log_event(

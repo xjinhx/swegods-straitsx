@@ -69,7 +69,7 @@ class CheckoutResponse(BaseModel):
     order_id: str
     status: str
     reason: Optional[str] = None
-    denial_reason: Optional[str] = None  # "commercial_validity_failure" | "insufficient_trust"
+    denial_reason: Optional[str] = None  # "identity_verification_failure" | "commercial_validity_failure" | "insufficient_trust"
     amount_sgd: float
     trust_score: float
     required_trust: float
@@ -139,6 +139,7 @@ class OrderOut(BaseModel):
     amount_sgd: float
     status: str
     reason: Optional[str]
+    denial_reason: Optional[str] = None
     trust_score_at_checkout: float
     required_trust: float
     commercial_validity_score: float

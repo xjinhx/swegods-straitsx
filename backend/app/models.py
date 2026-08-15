@@ -32,6 +32,11 @@ class Agent(SQLModel, table=True):
     credential_issuer: Optional[str] = None
     credential_valid: bool = True
 
+    # Revocation (security.py: checked live on every request, not just at issuance —
+    # a still-unexpired token stops working the moment this flips false).
+    key_active: bool = True
+    key_revoked_at: Optional[datetime] = None
+
     # Trust score breakdown (Section 7 + 8.1 "not a black box")
     trust_score: float = 0
     mandate_scope_score: float = 0
@@ -64,6 +69,11 @@ class Order(SQLModel, table=True):
     # pending -> approved | blocked -> approved_override -> completed | failed
     status: str = "pending"
     reason: Optional[str] = None
+    # "identity_verification_failure" | "commercial_validity_failure" | "insufficient_trust"
+    # | "straitsx_error" | None — structured counterpart to `reason`'s free text, for
+    # aggregate reporting (the merchant dashboard's blocked-reasons breakdown) without
+    # parsing prose.
+    denial_reason: Optional[str] = None
 
     trust_score_at_checkout: float = 0  # live_trust_score at whichever stage last computed it
     required_trust: float = 0
