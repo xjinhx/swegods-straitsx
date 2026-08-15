@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 
 import jwt
-from fastapi import HTTPException
+from fastapi import Header, HTTPException
 from sqlmodel import Session, select
 
+from app.config import MERCHANT_API_KEY
 from app.models import Agent, AuditEvent, Order
 from app.schemas import Mandate
 from app.security import decode_session_claims
@@ -50,6 +51,21 @@ def get_agent_session(session: Session, token: str) -> AgentSession:
         mandate_scope_score=trust["mandate_scope_score"],
         trust_score=trust["trust_score"],
     )
+
+
+def require_merchant_auth(x_merchant_key: str | None = Header(default=None)) -> None:
+    """Gate for the merchant's own dashboard endpoints (/merchant/*: revoke, override,
+    rule builder) — distinct from agent-facing trust scoring, which stays open on
+    purpose at /identify (the score is the gate, not a login wall). This is the
+    merchant's control panel, which does need one.
+
+    MERCHANT_API_KEY unset means the gate is off, matching behavior before it existed,
+    so existing deployments aren't broken until they opt in by setting it.
+    """
+    if not MERCHANT_API_KEY:
+        return
+    if x_merchant_key != MERCHANT_API_KEY:
+        raise HTTPException(status_code=401, detail="missing or invalid X-Merchant-Key header")
 
 
 def agent_order_history(session: Session, agent_id: str) -> tuple[int, int]:

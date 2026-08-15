@@ -50,3 +50,8 @@ XSGD_CHAIN_ID_SANDBOX = 43113      # Avalanche Fuji
 XSGD_CHAIN_ID_PRODUCTION = 43114   # Avalanche C-Chain Mainnet
 
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
+
+# Gates the merchant-facing /merchant/* endpoints (revoke, override, rule builder) —
+# separate from agent trust scoring, which stays deliberately open at /identify.
+# Empty means the gate is off (matches pre-gate behavior); set it to turn it on.
+MERCHANT_API_KEY = os.getenv("MERCHANT_API_KEY", "")

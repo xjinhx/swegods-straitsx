@@ -9,12 +9,12 @@ from sqlmodel import Session, select
 
 from app.audit import log_event
 from app.database import get_session
-from app.deps import agent_order_history
+from app.deps import agent_order_history, require_merchant_auth
 from app.models import Agent, MerchantRule, Order
 from app.schemas import OrderOut, OverrideRequest, RuleIn, RuleOut, TrustBreakdown
 from app.trust import blend_behavior_score, score_reputation
 
-router = APIRouter(prefix="/merchant", tags=["merchant"])
+router = APIRouter(prefix="/merchant", tags=["merchant"], dependencies=[Depends(require_merchant_auth)])
 
 
 def _live_behavior(session: Session, agent: Agent) -> tuple[float, float | None, str | None]:
