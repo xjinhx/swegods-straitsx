@@ -1,16 +1,16 @@
 # AgentMart
 
-Would you hand an AI agent your credit card and walk away? AgentMart is the answer to that question, built as an actual merchant instead of a thought experiment. There's no login form and no checkout button, because there's no human on the other end: an agent presents credentials, gets back a live, five-factor trust score, and the merchant's own configurable rules decide, in real time, whether the purchase goes through. Every purchase that clears settles in real $XSGD on Avalanche C-Chain mainnet.
+An AI agent just showed up to buy something. It has no face, no history with you, and nobody standing behind it to check its ID. Do you sell to it? AgentMart is a merchant built to answer that question in real time, not dodge it: there's no login form and no checkout button, because there's no human on the other end. An agent presents credentials, gets back a live, five-factor trust score, and the merchant's own configurable rules decide, in real time, whether the purchase goes through. Every purchase that clears settles in real $XSGD on Avalanche C-Chain mainnet.
 
 ![AgentMart system architecture: a human prompts a Claude agent, which calls the AgentMart API for trust scoring, merchant rules, and the identify/checkout/authorise/receipt flow; the API authorises through the StraitsX card API using the x402 challenge protocol and an EIP-3009 signed transfer, which settles on-chain in XSGD on Avalanche C-Chain; every step is logged to an append-only audit log, which updates the merchant dashboard, and a human can override a blocked order from that dashboard.](AgentMart_Diagram3.png)
 
 ## Why AgentMart: AI-native Commerce (Track 3)
 
-Track 3 asks for "the merchant experiences, APIs, and protocols for a future where AI agents become first-class customers." AgentMart answers that literally: it's the merchant side of that future, built so an agent is a first-class customer with its own trust profile, not a human pretending to click buttons, and not a checkout that always says yes.
+Agent-driven commerce isn't a 2030 forecast — it's 120 million agent-initiated payments on Alipay's AI Pay in a single week this February, and in Singapore, 8 in 10 shoppers already lean on AI when they buy something online. That volume is already arriving at merchants' doors, and nearly all of the industry's response so far has been built for the agent's side of the counter: how it spends safely. Almost nothing has been built for the merchant's side — how to decide whether to sell to a customer with no face, no history, and nothing to check at the door. That's the gap Track 3 names directly: "the merchant experiences, APIs, and protocols for a future where AI agents become first-class customers." AgentMart answers that literally: it's the merchant side of that future, built so an agent is a first-class customer with its own trust profile the merchant evaluates, not a human pretending to click buttons, and not a checkout that always says yes.
 
 **Five value propositions:**
 
-1. **Trust is a live number, not a login gate.** StraitsX's own deck says it plainly: a scoped credential limits what a compromised agent can spend, but "does not make the agent trustworthy, that part is still open." AgentMart is our answer. Identity and mandate are frozen at `/identify`, but behavior, commercial validity, and payment authority are recomputed fresh at `/checkout` and `/authorise`. Nothing coasts on a good first impression.
+1. **Trust is a live number the merchant reads, not a login gate the agent passes once.** StraitsX's own deck names the gap plainly: a scoped credential limits what a compromised agent can spend, but "does not make the agent trustworthy, that part is still open." That's the merchant's problem to solve, not the wallet's — and it's what AgentMart actually does. Identity and mandate are frozen at `/identify`, but behavior, commercial validity, and payment authority are recomputed fresh at `/checkout` and `/authorise`. Nothing coasts on a good first impression.
 
 2. **Price-injection defense is built into checkout.** `/checkout` compares what the agent *believes* it's paying against the live catalog price. If a poisoned product page fed the agent a fake price, the mismatch hard-blocks the order regardless of how trustworthy the agent otherwise looks (see Test Case 3). This closes a specific, demonstrated attack surface in agentic commerce, not just a generic fraud check.
 
@@ -21,6 +21,16 @@ Track 3 asks for "the merchant experiences, APIs, and protocols for a future whe
 5. **StraitsX only gets called once trust already cleared, and even then we check it's talking to the right network.** A bad-credential or price-mismatch order never reaches `/authorise` at all, the trust engine blocks it first (see Test Cases 1 and 2, no StraitsX call is ever made). When a payment does authorize, the challenge's asset address and chain id are cross-checked against the active network before anything gets signed, so a misdirected challenge gets rejected instead of silently signed. And the receipts themselves are real artifacts, not just database rows: session tokens and receipts are signed with a real Ed25519 keypair, verifiable by anyone with the public key, and a cleared payment settles as an actual transaction checkable on Snowtrace.
 
 And the demo agent itself is real too: Claude actually decides what to buy, no scripted flow behind the scenes.
+
+## The merchant's dashboard
+
+Track 3 asks for "merchant experiences," not just APIs — this is where that half shows up as something a merchant actually watches happen, not JSON they have to trust blindly.
+
+- **Live activity feed** — every identify/checkout/block/authorise/override/revoke event, polling in real time, cursor-paginated so it never re-renders the whole feed on every tick.
+- **Rule builder** — `category_cap`, `price_threshold`, `blocked_category` rules, written live and read by `/checkout` on the very next request: a merchant reconfigures risk tolerance without a redeploy.
+- **Per-agent trust panel + trust trajectory chart** — the five-factor breakdown and how it moved over an agent's history, not just the current number.
+- **Order timeline + per-order audit trail** (`GET /audit/{order_id}`) — every scoring decision that led to an approve/block, with the reasoning, not just the outcome. `blocked` needs a merchant override before the agent may retry `/authorise` at all; a `failed` authorization (StraitsX itself rejected the charge) is tracked as a distinct state, so an infra hiccup on their end is never held against the agent's reputation.
+- **Manual override** for blocked orders, and **instant credential revoke/reinstate** for an agent mid-session.
 
 ## Live demo
 
@@ -57,14 +67,6 @@ Three pieces, each runnable and deployable on its own:
 | `payment_authority_score` | Did StraitsX actually settle? | Live at `/authorise` only |
 
 The blend weights shift by stage: `/identify` only has identity + mandate to work with; `/checkout` adds live behavior + commercial validity; `/authorise` adds payment authority once settlement succeeds. Two components are hard gates, not just weighted inputs: `identity_score < 50` or `commercial_validity_score < 50` blocks the checkout outright, no matter how high the blended score would otherwise be. Full detail in `backend/app/trust.py`.
-
-## Merchant experience (the dashboard)
-
-- **Live activity feed:** every identify/checkout/block/authorise/override/revoke event, polling in real time, cursor-paginated so it never re-renders the whole feed on every tick.
-- **Rule builder:** `category_cap`, `price_threshold`, `blocked_category` rules, written live and read by `/checkout` on the very next request.
-- **Per-agent trust panel + trust trajectory chart:** see the five-factor breakdown and how it moved over an agent's history, not just the current number.
-- **Order timeline + per-order audit trail** (`GET /audit/{order_id}`): every scoring decision that led to an approve/block, with the reasoning, not just the outcome.
-- **Manual override** for blocked orders, and **instant credential revoke/reinstate** for an agent mid-session.
 
 ## Try it yourself: test cases
 
@@ -239,13 +241,3 @@ Douceur, J. R. (2002). The Sybil attack. In P. Druschel, F. Kaashoek, & A. Rowst
 Jøsang, A., Ismail, R., & Boyd, C. (2007). A survey of trust and reputation systems for online service provision. *Decision Support Systems*, *43*(2), 618–644. https://doi.org/10.1016/j.dss.2005.05.019
 
 Lakkaraju, S. (2025). AI-powered dynamic risk scoring for e-commerce transactions. *International Journal of Scientific Research in Computer Science, Engineering and Information Technology*, *11*(1), 3515–3526. https://doi.org/10.32628/CSEIT251112363
-
-## Design notes
-
-- **Trust score** (`backend/app/trust.py`) is a continuous, weighted blend rather than a pass-or-fail identity check, recomputed live at each stage rather than frozen once at login. The full breakdown is returned from every stage and shown on the merchant dashboard, never a black box.
-- **Agent identity** is derived from the credential's own hash (`backend/app/routers/identify.py`), so repeat `/identify` calls with the same credential resolve to the same agent record, which is what makes the behavioral, velocity, and reputation signals meaningful over time instead of resetting on every call.
-- **Reputation** (`score_reputation` in `backend/app/trust.py`) is a Wilson-score-interval lower bound over an agent's own resolved order history, not a raw success rate. It stays conservative under a thin sample so one lucky order can't buy a perfect score.
-- **Receipts and session tokens are signed with Ed25519** (`backend/app/security.py`), not full PKI, by design. This is a different layer from the trust score, on purpose: the trust score decides whether an agent *should* be allowed to buy, Ed25519 proves a given receipt or token genuinely came from AgentMart and wasn't altered after the fact. It's evidentiary integrity for the platform's own records, not a judgment on the agent's behavior. The backend holds a real Ed25519 keypair (`issuer_private_key.pem` / `issuer_public_key.pem`), generated once by `scripts/ensure_issuer_keypair.py` and persisted on the Railway volume rather than regenerated on every deploy. Because it's asymmetric, anyone (an agent, a judge, an auditor) can verify a receipt or session token with just the public key, without ever touching the private key or trusting the API's word for it, and because the keypair survives redeploys, tokens and receipts already issued don't get silently invalidated.
-- **Payment authorization is gasless for the agent.** `_sign_payment` in `backend/app/straitsx_client.py` signs an EIP-3009 `TransferWithAuthorization`, not a raw on-chain transaction, so the agent authorizes a transfer without needing native gas or submitting anything itself; StraitsX's relayer submits the actual transaction.
-- **Every payment challenge is cross-checked against the active network before signing.** Before `_sign_payment` signs anything, it verifies the x402 challenge's asset address and chain id match the active `STRAITSX_PROFILE` (sandbox or production). A challenge pointing at the wrong network gets rejected outright instead of silently signed, which closes off a whole class of cross-network replay mistakes.
-- **`/authorise` is the only endpoint that can fail non-deterministically** (the StraitsX call), so a blocked order and a failed authorization are distinct states. `blocked` needs a merchant override before an agent may retry `/authorise` at all. `failed` means the gateway itself rejected the charge, and, unlike a checkout-stage block, is still counted honestly rather than penalizing the agent for an infra-side failure.
