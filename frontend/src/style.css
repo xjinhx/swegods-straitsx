@@ -1,3 +1,32 @@
+@font-face {
+  font-family: "Helvetica Now Display";
+  src: url("./assets/fonts/HelveticaNowDisplay-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Helvetica Now Display";
+  src: url("./assets/fonts/HelveticaNowDisplay-RegIta.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Helvetica Now Display";
+  src: url("./assets/fonts/HelveticaNowDisplay-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Helvetica Now Display";
+  src: url("./assets/fonts/HelveticaNowDisplay-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --paper: #F6F7F9;
   --surface: #FFFFFF;
@@ -17,7 +46,7 @@
   --line: #E2E5EA;
   --line-strong: #C9CFD8;
   --mono: ui-monospace, "Cascadia Mono", "Cascadia Code", "SF Mono", Consolas, monospace;
-  --sans: -apple-system, "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --sans: "Helvetica Now Display", -apple-system, "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {

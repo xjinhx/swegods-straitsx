@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { api } from "../api";
 import ActivityFeed from "../components/ActivityFeed.vue";
 import TrustBreakdown from "../components/TrustBreakdown.vue";
@@ -9,10 +9,33 @@ const orders = ref([]);
 const agents = ref([]);
 const selectedAgentId = ref(null);
 const overriding = ref(null);
+const copied = ref(false);
 let timer = null;
 
+const STAGES = [
+  { key: "discover", label: "Discover", matches: [] },
+  { key: "identify", label: "Identify", matches: ["identify"] },
+  { key: "checkout", label: "Checkout", matches: ["checkout", "blocked"] },
+  { key: "authorise", label: "Authorise", matches: ["authorise"] },
+  { key: "prove", label: "Prove", matches: ["receipt"] },
+];
+const recentEvents = ref([]);
+const activeIndex = computed(() => {
+  if (!recentEvents.value.length) return -1;
+  return STAGES.findIndex((s) => s.matches.includes(recentEvents.value[0].step));
+});
+
+const cmd = 'python agent.py "buy me a birthday gift under $50"';
+function copyCmd() {
+  navigator.clipboard?.writeText(cmd);
+  copied.value = true;
+  setTimeout(() => (copied.value = false), 1500);
+}
+
 async function refresh() {
-  [orders.value, agents.value] = await Promise.all([api.orders(), api.agents()]);
+  [orders.value, agents.value, recentEvents.value] = await Promise.all([
+    api.orders(), api.agents(), api.activityFeed(1),
+  ]);
   if (!selectedAgentId.value && agents.value.length) selectedAgentId.value = agents.value[0].agent_id;
 }
 
@@ -38,6 +61,23 @@ async function doOverride(order) {
 <template>
   <div class="grid">
     <section class="panel span-2">
+      <span class="eyebrow">Run the demo agent</span>
+      <p class="hint">
+        The shopping agent is a standalone Claude-powered script (<code class="mono">demo_agent/agent.py</code>)
+        that calls this exact API over HTTP — nothing here is simulated.
+      </p>
+      <div class="cmd-row">
+        <code class="mono cmd">{{ cmd }}</code>
+        <button @click="copyCmd">{{ copied ? "Copied" : "Copy" }}</button>
+      </div>
+      <ol class="stages">
+        <li v-for="(s, i) in STAGES" :key="s.key" :class="{ active: i === activeIndex, done: i < activeIndex }">
+          <span class="stage-dot"></span>{{ s.label }}
+        </li>
+      </ol>
+    </section>
+
+    <section class="panel span-2">
       <span class="eyebrow">Live activity — merchant view</span>
       <ActivityFeed :limit="25" />
     </section>
@@ -57,7 +97,7 @@ async function doOverride(order) {
 
     <section class="panel span-2">
       <span class="eyebrow">Orders</span>
-      <div v-if="!orders.length" class="empty">No orders yet — run the demo agent from the Agent view.</div>
+      <div v-if="!orders.length" class="empty">No orders yet — run the demo agent (command above).</div>
       <div v-else class="table-wrap">
         <table>
           <thead>
@@ -105,4 +145,18 @@ async function doOverride(order) {
 }
 .agent-select { width: 100%; margin-bottom: 1rem; }
 .hint { color: var(--ink-faint); font-size: 0.82rem; margin-top: 0.7rem; }
+
+.cmd-row { display: flex; gap: 0.6rem; align-items: center; margin-top: 0.6rem; }
+.cmd { background: var(--surface-2); padding: 0.55rem 0.8rem; border-radius: 6px; flex: 1; font-size: 0.85rem; overflow-x: auto; }
+
+.stages { list-style: none; display: flex; gap: 0; margin: 1rem 0 0; padding: 0; }
+.stages li {
+  flex: 1; display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.4rem;
+  border-bottom: 2px solid var(--line); color: var(--ink-faint); font-size: 0.85rem; font-weight: 600;
+}
+.stage-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line-strong); flex: none; }
+.stages li.done { color: var(--ink-muted); border-color: var(--accent); }
+.stages li.done .stage-dot { background: var(--accent); }
+.stages li.active { color: var(--accent-ink); border-color: var(--accent); }
+.stages li.active .stage-dot { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 </style>
