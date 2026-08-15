@@ -1,6 +1,6 @@
 """
 Direct MCP client — connects to StraitsX's card gateway and lists its tools.
-Bypasses Claude Desktop's connector UI entirely (PRD Section 9.2).
+Bypasses Claude Desktop's connector UI entirely.
 
 Setup:  pip install mcp
 Usage:  python discover_straitsx_mcp.py sandbox      # or: production

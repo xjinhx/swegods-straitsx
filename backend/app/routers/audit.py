@@ -1,6 +1,6 @@
-"""GET /audit/{order_id} and GET /activity/feed — append-only audit trail (PRD Section
-6 step 7, Milestone 6 "Prove"). /activity/feed backs both the agent demo view and the
-merchant dashboard's live feed (Section 8.1) off the same underlying events."""
+"""GET /audit/{order_id} and GET /activity/feed — append-only audit trail.
+/activity/feed backs both the agent demo view and the merchant dashboard's live feed
+off the same underlying events."""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 

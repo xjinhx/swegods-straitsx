@@ -1,5 +1,5 @@
 """
-PRD-trust-score-v2 demo script: drives the two scenarios that matter for the pitch —
+trust-score-v2 demo script: drives the two scenarios that matter for the pitch —
 a clean checkout and a tampered-price checkout — against a running backend, printing
 the score_breakdown at each stage so the live_trust_score move is visible without
 needing the frontend up.

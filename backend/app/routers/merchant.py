@@ -1,6 +1,6 @@
-"""Merchant-facing endpoints — PRD Section 8 (the human merchant's side, not the
-agent's). Reuses data the core flow already generates; the rule builder is the only
-place with new state (MerchantRule rows that /checkout reads from, see app/rules.py)."""
+"""Merchant-facing endpoints (the human merchant's side, not the agent's). Reuses
+data the core flow already generates; the rule builder is the only place with new
+state (MerchantRule rows that /checkout reads from, see app/rules.py)."""
 import json
 from datetime import datetime
 

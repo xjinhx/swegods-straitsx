@@ -1,4 +1,4 @@
-"""GET /receipt/{order_id} — PRD Section 6 step 7, Milestone 6 ("Prove")."""
+"""GET /receipt/{order_id}."""
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException

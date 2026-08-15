@@ -16,7 +16,7 @@ class AgentSession:
     current (possibly since-changed) values, so a token can't inherit a mandate it
     was never issued under.
 
-    identity_score and mandate_scope_score stay frozen (PRD-trust-score-v2): they
+    identity_score and mandate_scope_score stay frozen (trust-score-v2): they
     answer "who is this agent", which shouldn't change mid-session. behavior_score is
     deliberately NOT exposed here — it's live now, read fresh off the Agent row by
     whoever needs it (checkout.py/authorise.py), not frozen into the token.

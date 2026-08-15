@@ -1,9 +1,9 @@
-"""StraitsX one-time card gateway client (PRD Section 9).
+"""StraitsX one-time card gateway client.
 
 Mocked by default (MOCK_STRAITSX=true) so the rest of the platform never blocks on
-sandbox access, per Section 9.6's build-order note.
+sandbox access.
 
-The real flow (confirmed live against the sandbox server, PRD Section 9.2) starts with
+The real flow (confirmed live against the sandbox server) starts with
 an actual MCP tool call, then drops into an x402 payment challenge on top of a REST
 endpoint the tool call points us at:
   1. Over the card gateway's MCP session (SSE transport), call `get_card_sandbox` /

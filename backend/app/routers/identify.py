@@ -1,9 +1,9 @@
-"""POST /identify — PRD Section 6 step 3 & Section 7.
+"""POST /identify.
 
 Agent identity is derived from the credential itself (its hash), so repeat calls with
 the same credential resolve to the same agent record instead of minting a new identity
-every time — that's what lets us track identify velocity (Section 7's behavioural
-signal) per agent.
+every time — that's what lets us track identify velocity (a behavioural signal) per
+agent.
 """
 import hashlib
 import json
