@@ -24,7 +24,7 @@ And the demo agent itself is real too: Claude actually decides what to buy, no s
 
 ## The merchant's dashboard
 
-Track 3 asks for "merchant experiences," not just APIs — this is where that half shows up as something a merchant actually watches happen, not JSON they have to trust blindly.
+Everything above works over the API, but a merchant shouldn't have to trust a black box with real money. The dashboard is the same trust scores, rules, and decisions, made visible and watchable live, not buried in a response body.
 
 - **Live activity feed** — every identify/checkout/block/authorise/override/revoke event, polling in real time, cursor-paginated so it never re-renders the whole feed on every tick.
 - **Rule builder** — `category_cap`, `price_threshold`, `blocked_category` rules, written live and read by `/checkout` on the very next request: a merchant reconfigures risk tolerance without a redeploy.
