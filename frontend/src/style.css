@@ -1,0 +1,134 @@
+:root {
+  --paper: #F6F7F9;
+  --surface: #FFFFFF;
+  --surface-2: #EEF1F4;
+  --ink: #14171F;
+  --ink-muted: #5B6472;
+  --ink-faint: #8A93A3;
+  --accent: #0B7285;
+  --accent-ink: #075A69;
+  --accent-soft: #E3F1F2;
+  --warn: #A6650A;
+  --warn-soft: #FBF0DD;
+  --good: #2F8F4E;
+  --good-soft: #E6F4EA;
+  --bad: #C23B3B;
+  --bad-soft: #FBE9E9;
+  --line: #E2E5EA;
+  --line-strong: #C9CFD8;
+  --mono: ui-monospace, "Cascadia Mono", "Cascadia Code", "SF Mono", Consolas, monospace;
+  --sans: -apple-system, "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0C0F14;
+    --surface: #131720;
+    --surface-2: #1A1F29;
+    --ink: #E7EAF0;
+    --ink-muted: #97A0B2;
+    --ink-faint: #626B7C;
+    --accent: #35C9BC;
+    --accent-ink: #7FE3D9;
+    --accent-soft: rgba(53, 201, 188, 0.12);
+    --warn: #E3A63F;
+    --warn-soft: rgba(227, 166, 63, 0.12);
+    --good: #57C77E;
+    --good-soft: rgba(87, 199, 126, 0.12);
+    --bad: #E1685F;
+    --bad-soft: rgba(225, 104, 95, 0.12);
+    --line: #262C38;
+    --line-strong: #333B49;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body, #app { height: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+}
+code, .mono { font-family: var(--mono); }
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 0.5rem 0.9rem;
+}
+button:hover { border-color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary:hover { filter: brightness(1.05); }
+button.ghost { border-color: transparent; background: transparent; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+input, select, textarea {
+  font: inherit;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 0.5rem 0.7rem;
+}
+
+/* ---- App shell ---- */
+.app-shell { min-height: 100%; display: flex; flex-direction: column; }
+.topbar {
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  padding: 0.9rem 1.5rem;
+  display: flex; align-items: center; gap: 1.25rem;
+}
+.brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-family: var(--mono); }
+.brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); }
+.tabs { display: flex; gap: 0.3rem; margin-left: auto; }
+.tabs button {
+  border: none; background: transparent; padding: 0.5rem 0.9rem; border-radius: 6px;
+  color: var(--ink-muted); font-weight: 600; font-size: 0.9rem;
+}
+.tabs button.active { background: var(--accent-soft); color: var(--accent-ink); }
+
+.content { flex: 1; padding: 1.5rem; max-width: 82rem; margin: 0 auto; width: 100%; }
+
+.eyebrow {
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-faint);
+}
+
+.panel {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 1.1rem 1.3rem;
+}
+
+.pill {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  font-family: var(--mono); font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.03em; text-transform: uppercase;
+  padding: 0.2rem 0.55rem; border-radius: 999px;
+}
+.pill.approved, .pill.completed { color: var(--good); background: var(--good-soft); }
+.pill.blocked, .pill.pending { color: var(--warn); background: var(--warn-soft); }
+.pill.approved_override { color: var(--accent-ink); background: var(--accent-soft); }
+.pill.failed { color: var(--bad); background: var(--bad-soft); }
+
+.tabular { font-variant-numeric: tabular-nums; font-family: var(--mono); }
+
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+thead th {
+  text-align: left; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--ink-faint); padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid var(--line-strong); white-space: nowrap;
+}
+tbody td { padding: 0.6rem 0.7rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+
+.empty { color: var(--ink-faint); font-size: 0.88rem; padding: 1rem 0; }
