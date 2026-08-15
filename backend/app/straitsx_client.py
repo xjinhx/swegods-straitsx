@@ -15,6 +15,7 @@ plain MCP tool call — it's an x402 payment challenge on top of a REST endpoint
 import base64
 import hashlib
 import json
+import logging
 import secrets
 import time
 from dataclasses import dataclass
@@ -22,6 +23,8 @@ from dataclasses import dataclass
 import httpx
 from eth_account import Account
 from eth_utils import to_checksum_address
+
+logger = logging.getLogger(__name__)
 
 from app.config import (
     MAX_CARD_AMOUNT_SGD,
@@ -120,6 +123,14 @@ class StraitsXCardClient:
             except (KeyError, IndexError) as exc:
                 raise StraitsXError(f"malformed x402 challenge: {challenge}") from exc
 
+            logger.warning(
+                "StraitsX %s charge about to be signed: order=%s amount_sgd=%.2f "
+                "from=%s payTo=%s asset=%s chainId=%s atomic_amount=%s network=%s",
+                self.profile, order_id, amount_sgd, self.wallet_address,
+                requirement.get("payTo"), requirement.get("asset"), requirement.get("chainId"),
+                requirement.get("amount"), requirement.get("network"),
+            )
+
             payment_header = self._sign_payment(requirement)
 
             paid_resp = await client.post(
@@ -216,10 +227,17 @@ class StraitsXCardClient:
         if not signature_hex.startswith("0x"):
             signature_hex = "0x" + signature_hex
 
+        logger.info(
+            "sign_payment: requirement[amount]=%r (%s) -> parsed atomic value=%s -> authorization.value=%r",
+            requirement.get("amount"), type(requirement.get("amount")).__name__,
+            value, str(value),
+        )
+
         payload = {
             "x402Version": 1,
             "scheme": requirement["scheme"],
             "network": requirement["network"],
+            "accepted": requirement,
             "payload": {
                 "signature": signature_hex,
                 "authorization": {
