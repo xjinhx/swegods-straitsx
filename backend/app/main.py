@@ -20,10 +20,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=f"{MERCHANT_NAME} — Agent-Native Merchant API",
-    description=(
-        "Merchant API built for AI shopping agents as first-class customers. "
-        "See PRD Section 7 for the full endpoint contract."
-    ),
     version="0.1.0",
     lifespan=lifespan,
 )
