@@ -1,8 +1,12 @@
 const BASE = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000";
+const MERCHANT_KEY = import.meta.env.VITE_MERCHANT_API_KEY || "";
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(MERCHANT_KEY ? { "X-Merchant-Key": MERCHANT_KEY } : {}),
+    },
     ...options,
   });
   const body = await res.json().catch(() => null);
