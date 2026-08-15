@@ -1,4 +1,4 @@
-"""Demo shopping agent — PRD Section 6, "the demo script".
+"""Demo shopping agent.
 
 A human types a natural-language request; Claude drives the purchase end to end by
 calling AgentMart's HTTP API as tools: browse -> identify -> checkout -> authorise ->
@@ -24,7 +24,7 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
 MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5")
 
 # The mandate a human owner would have configured for this agent ahead of time
-# (PRD Section 5: "spend cap, merchant whitelist, expiry"). The LLM never invents
+# (spend cap, merchant whitelist, expiry). The LLM never invents
 # this — it's fixed config, same as a real agent runtime would load from its wallet.
 AGENT_NAME = "birthday-shopper"
 CREDENTIAL = os.getenv("AGENT_CREDENTIAL", "demo.agent.credential-signed-blob-v1")

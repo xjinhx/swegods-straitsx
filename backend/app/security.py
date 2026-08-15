@@ -1,5 +1,5 @@
-"""Ed25519-signed JWTs for session tokens and receipts (PRD non-goal 3: signed JWTs
-with a keypair, not a custom cert authority / full X.509 PKI).
+"""Ed25519-signed JWTs for session tokens and receipts (signed with a keypair, not a
+custom cert authority / full X.509 PKI).
 
 AgentMart (the issuer) holds one Ed25519 keypair (see scripts/generate_issuer_keypair.py)
 and signs every session token/receipt with the private key; verification only needs the

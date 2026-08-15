@@ -1,9 +1,9 @@
-"""Merchant decision layer (PRD Section 8.2 rule builder + Section 13's framing of this
-as the "missing internal decision model", arXiv 2607.18347).
+"""Merchant decision layer (the "missing internal decision model" that arXiv 2607.18347
+argues no current agentic-commerce protocol owns).
 
 `/checkout` reads live from MerchantRule rows instead of hardcoded thresholds, so the
-merchant dashboard's rule builder has real effect (Section 8.2) without any extra
-backend logic beyond this evaluation.
+merchant dashboard's rule builder has real effect without any extra backend logic
+beyond this evaluation.
 """
 from dataclasses import dataclass
 

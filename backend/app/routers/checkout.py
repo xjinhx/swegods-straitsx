@@ -1,10 +1,10 @@
-"""POST /checkout — PRD Section 6 step 5. PRD-trust-score-v2: the authorization decision
-now runs against a live_trust_score (frozen identity/mandate + live behavior + live
-commercial_validity), not the score frozen at /identify, and commercial_validity_score
-is a hard gate independent of the blend — a tampered checkout can't be bought back by a
-high identity score (Section 5.3). identity_score gets the same treatment (IDENTITY_GATE)
-— otherwise it's just 30% of the blend, and a credential that fails the shape check
-entirely can still clear the highest price tier on a disciplined-looking mandate alone."""
+"""POST /checkout — trust-score-v2: the authorization decision now runs against a
+live_trust_score (frozen identity/mandate + live behavior + live commercial_validity),
+not the score frozen at /identify, and commercial_validity_score is a hard gate
+independent of the blend — a tampered checkout can't be bought back by a high identity
+score. identity_score gets the same treatment (IDENTITY_GATE) — otherwise it's just 30%
+of the blend, and a credential that fails the shape check entirely can still clear the
+highest price tier on a disciplined-looking mandate alone."""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 

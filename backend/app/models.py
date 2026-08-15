@@ -1,4 +1,4 @@
-"""DB tables. See PRD Section 7 (API surface) and Section 8 (trust score inputs)."""
+"""DB tables."""
 import json
 from datetime import datetime
 from typing import Optional

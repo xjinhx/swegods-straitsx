@@ -12,12 +12,12 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./agentmart.db")
 JWT_ALGORITHM = "EdDSA"
 # Ed25519 keypair AgentMart (the issuer) signs session tokens/receipts with — see
 # app/security.py and scripts/generate_issuer_keypair.py. Asymmetric signing, not a
-# custom cert authority: still "signed JWTs" per the PRD non-goal, just with a
+# custom cert authority: still "signed JWTs", just with a
 # public/private keypair instead of a shared HS256 secret.
 ISSUER_PRIVATE_KEY_PATH = os.getenv("ISSUER_PRIVATE_KEY_PATH", "./issuer_private_key.pem")
 ISSUER_PUBLIC_KEY_PATH = os.getenv("ISSUER_PUBLIC_KEY_PATH", "./issuer_public_key.pem")
 
-# StraitsX card-issuing MCP (PRD Section 9). Cards are single-use, 5-30 SGD.
+# StraitsX card-issuing MCP. Cards are single-use, 5-30 SGD.
 # Hackathon requirement (docs_folder/developer.md): the final solution must settle in
 # real $XSGD on Avalanche C-Chain Mainnet (43114) — Fuji/sandbox (43113) is for local
 # testing only. Defaults to production; set STRAITSX_PROFILE=sandbox to test locally.
@@ -40,7 +40,7 @@ STRAITSX_WALLET_PRIVATE_KEY = os.getenv("STRAITSX_WALLET_PRIVATE_KEY", "")
 MIN_CARD_AMOUNT_SGD = 5.0
 MAX_CARD_AMOUNT_SGD = 30.0
 
-# Confirmed via live StraitsX responses, PRD Section 9.4. straitsx_client.py checks
+# Confirmed via live StraitsX responses. straitsx_client.py checks
 # every x402 challenge's asset/chainId against these before signing, so a challenge
 # pointing at the wrong network for the active profile gets rejected instead of
 # silently paid.

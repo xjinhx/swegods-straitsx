@@ -1,7 +1,7 @@
-"""POST /authorise — PRD Section 6 step 6. Charges via StraitsX's one-time card MCP
-(mocked by default, see app/straitsx_client.py) and settles in XSGD.
+"""POST /authorise — charges via StraitsX's one-time card MCP (mocked by default, see
+app/straitsx_client.py) and settles in XSGD.
 
-PRD-trust-score-v2: StraitsX's settlement outcome now feeds payment_authority_score
+trust-score-v2: StraitsX's settlement outcome now feeds payment_authority_score
 into the blended live_trust_score instead of being a hard boolean disconnected from
 trust. A StraitsXError still hard-fails the order (there's no card to charge without
 StraitsX succeeding) but is now logged as a graded signal — see

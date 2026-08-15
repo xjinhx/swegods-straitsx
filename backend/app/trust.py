@@ -1,7 +1,7 @@
-"""Trust scoring (PRD Section 7 "Trust score inputs", framed per arXiv 2604.03976 as a
-continuous risk-adjustment score rather than a pass/fail gate).
+"""Trust scoring (framed per arXiv 2604.03976 as a continuous risk-adjustment score
+rather than a pass/fail gate).
 
-PRD-trust-score-v2: the score is no longer one number frozen at /identify. Five
+trust-score-v2: the score is no longer one number frozen at /identify. Five
 components, each 0-100 (or None where excluded):
   - mandate_scope_score:      narrower spend cap / whitelist / expiry = higher trust.
                                Frozen into the session token at /identify.
@@ -50,7 +50,7 @@ AUTHORISE_BEHAVIOR_WEIGHT = 0.10
 AUTHORISE_COMMERCIAL_WEIGHT = 0.25
 AUTHORISE_PAYMENT_WEIGHT = 0.30
 
-# Below this, /checkout hard-denies regardless of the blended score (PRD Section 5.3) -
+# Below this, /checkout hard-denies regardless of the blended score -
 # a high identity/mandate score can't buy back a checkout whose contents don't check out.
 COMMERCIAL_VALIDITY_GATE = 50.0
 
@@ -263,7 +263,7 @@ def blend_authorise_score(
 
 
 # ---- Default required-trust tiers, used when no merchant price_threshold rule exists
-# (PRD Section 8.2: merchant can override these via the rule builder). ----
+# (merchant can override these via the rule builder). ----
 DEFAULT_PRICE_TIERS = [
     (30.0, 80),
     (20.0, 65),

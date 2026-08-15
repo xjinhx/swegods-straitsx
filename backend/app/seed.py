@@ -1,5 +1,5 @@
-"""Seed catalogue. Most items held to 5-6.90 SGD (well under the 5-30 SGD card cap from
-PRD Section 9.6) so routine sandbox testing stays cheap. Two items (SKU-1011, SKU-1013)
+"""Seed catalogue. Most items held to 5-6.90 SGD (well under the 5-30 SGD card cap) so
+routine sandbox testing stays cheap. Two items (SKU-1011, SKU-1013)
 are deliberately priced into the higher DEFAULT_PRICE_TIERS bands (trust.py) — with
 every other item under $10, a checkout at qty=1 always has required_trust=0 and a bad
 trust score can never actually get rejected without inflating quantity. These two exist
