@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
 from app.audit import log_event
-from app.config import MERCHANT_NAME
+from app.config import MAX_CARD_AMOUNT_SGD, MERCHANT_NAME, MIN_CARD_AMOUNT_SGD
 from app.database import get_session
 from app.deps import get_agent_from_token
 from app.models import Order, Product
@@ -35,6 +35,11 @@ def checkout(payload: CheckoutRequest, session: Session = Depends(get_session)):
     if amount_sgd > agent.spend_cap_sgd:
         decision_allowed, required_trust, reason = False, 101, (
             f"amount {amount_sgd:.2f} SGD exceeds mandate spend cap {agent.spend_cap_sgd:.2f} SGD"
+        )
+    elif amount_sgd < MIN_CARD_AMOUNT_SGD or amount_sgd > MAX_CARD_AMOUNT_SGD:
+        decision_allowed, required_trust, reason = False, 101, (
+            f"amount {amount_sgd:.2f} SGD is outside the card issuance range "
+            f"{MIN_CARD_AMOUNT_SGD:.0f}-{MAX_CARD_AMOUNT_SGD:.0f} SGD — reduce quantity and try again"
         )
     else:
         decision = evaluate(session, product.category, amount_sgd, agent.trust_score)
