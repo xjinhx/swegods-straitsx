@@ -35,6 +35,11 @@ const candidates = computed(() => {
 
 const seriesData = ref([]); // [{ order, outcomeLabel, color, points: [{stage,label,score,x,y}] }]
 const loading = ref(false);
+const hoveredKey = ref(null);
+
+function pointKey(series, p) {
+  return `${series.order.order_id}:${p.stage}`;
+}
 
 async function loadSeries() {
   if (!candidates.value.length) { seriesData.value = []; return; }
@@ -79,6 +84,15 @@ watch(candidates, loadSeries, { immediate: true, deep: false });
 function linePoints(series) {
   return series.points.map((p) => `${p.x},${p.y}`).join(" ");
 }
+// Denial reasons (e.g. commercial-validity / identity-gate messages) can run to a full
+// sentence — the tooltip box is a fixed-size SVG rect, not a wrapping HTML element, so
+// an untruncated string overflows past its edges and renders unstyled on the page
+// behind it instead of white-on-dark. Keep it short; the full reason is already
+// visible in the orders table and activity feed.
+function truncate(text, max = 30) {
+  if (!text || text.length <= max) return text;
+  return text.slice(0, max - 1).trimEnd() + "…";
+}
 function endLabelY(series) {
   const last = series.points[series.points.length - 1];
   return last.y < 40 ? last.y - 14 : last.y + 22;
@@ -112,19 +126,29 @@ function endLabelY(series) {
         <template v-for="series in seriesData" :key="series.order.order_id">
           <polyline class="chart-line" :points="linePoints(series)" :style="{ stroke: series.color }"></polyline>
           <g v-for="p in series.points" :key="p.stage" class="chart-point" tabindex="0"
-             role="img" :aria-label="`${series.agentName}, ${p.label}, score ${p.score.toFixed(1)}, ${p.detail}`">
+             role="img" :aria-label="`${series.agentName}, ${p.label}, score ${p.score.toFixed(1)}, ${p.detail}`"
+             @mouseenter="hoveredKey = pointKey(series, p)" @mouseleave="hoveredKey = null"
+             @focus="hoveredKey = pointKey(series, p)" @blur="hoveredKey = null">
             <circle class="chart-dot" :cx="p.x" :cy="p.y" r="5" :style="{ fill: series.color }"></circle>
             <circle class="chart-hit" :cx="p.x" :cy="p.y" r="15"></circle>
-            <g class="chart-tt" :transform="`translate(${p.x},${p.y})`">
-              <rect x="-84" :y="p.y < 90 ? 14 : -50" width="168" height="36" rx="6" style="fill:var(--ink)"></rect>
-              <text x="0" :y="p.y < 90 ? 31 : -33" text-anchor="middle" class="tt-title">{{ p.label }} · {{ series.agentName }}</text>
-              <text x="0" :y="p.y < 90 ? 46 : -18" text-anchor="middle" class="tt-value">{{ p.score.toFixed(1) }} — {{ p.detail }}</text>
-            </g>
           </g>
           <text class="chart-end-name" :x="series.points[series.points.length-1].x + 14" :y="endLabelY(series) - 8">{{ series.agentName }}</text>
           <text class="chart-end-score tabular" :x="series.points[series.points.length-1].x + 14" :y="endLabelY(series) + 8" :style="{ fill: series.color }">
             {{ series.points[series.points.length-1].score.toFixed(1) }}
           </text>
+        </template>
+
+        <!-- Tooltip layer, rendered after every line/dot/end-label above so the active
+             tooltip always paints on top — including when hovering a series' last
+             point, right where its end-label also sits. -->
+        <template v-for="series in seriesData" :key="series.order.order_id + '-tt'">
+          <g v-for="p in series.points" :key="p.stage" class="chart-tt"
+             :class="{ visible: hoveredKey === pointKey(series, p) }"
+             :transform="`translate(${p.x},${p.y})`">
+            <rect x="-130" :y="p.y < 90 ? 14 : -50" width="260" height="36" rx="6" style="fill:var(--ink)"></rect>
+            <text x="0" :y="p.y < 90 ? 31 : -33" text-anchor="middle" class="tt-title">{{ truncate(`${p.label} · ${series.agentName}`, 28) }}</text>
+            <text x="0" :y="p.y < 90 ? 46 : -18" text-anchor="middle" class="tt-value">{{ p.score.toFixed(1) }} — {{ truncate(p.detail, 20) }}</text>
+          </g>
         </template>
       </svg>
 
@@ -149,8 +173,8 @@ function endLabelY(series) {
 .chart-line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .chart-dot { stroke: var(--surface); stroke-width: 2; transition: r 0.1s; }
 .chart-hit { fill: transparent; cursor: pointer; }
-.chart-point .chart-tt { opacity: 0; transition: opacity 0.12s; pointer-events: none; }
-.chart-point:hover .chart-tt, .chart-point:focus-visible .chart-tt { opacity: 1; }
+.chart-tt { opacity: 0; transition: opacity 0.12s; pointer-events: none; }
+.chart-tt.visible { opacity: 1; }
 .chart-point:hover .chart-dot, .chart-point:focus-visible .chart-dot { r: 7; }
 .chart-point:focus-visible { outline: none; }
 .tt-title { fill: var(--paper); font-family: var(--sans); font-size: 11px; font-weight: 600; }

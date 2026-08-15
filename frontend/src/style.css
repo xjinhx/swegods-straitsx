@@ -143,6 +143,22 @@ input, select, textarea {
 }
 .tabs button.active { background: var(--accent-soft); color: var(--accent-ink); }
 
+.help-wrap { position: relative; }
+.help-fab {
+  width: 26px; height: 26px; padding: 0; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.85rem; color: var(--ink-muted);
+}
+.help-fab.active, .help-fab:hover { border-color: var(--accent); color: var(--accent-ink); }
+.help-popover {
+  position: absolute; top: calc(100% + 0.6rem); right: 0; width: 22rem; max-width: 80vw;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 1rem 1.1rem; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); z-index: 20;
+}
+.help-popover .hint { color: var(--ink-faint); font-size: 0.82rem; margin-top: 0.5rem; }
+.cmd-row { display: flex; gap: 0.6rem; align-items: center; margin-top: 0.7rem; }
+.cmd { background: var(--surface-2); padding: 0.55rem 0.8rem; border-radius: 6px; flex: 1; font-size: 0.82rem; overflow-x: auto; }
+
 .content { flex: 1; padding: 1.5rem; max-width: 82rem; margin: 0 auto; width: 100%; }
 
 .eyebrow {

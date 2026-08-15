@@ -27,8 +27,41 @@ def get_order_audit(order_id: str, session: Session = Depends(get_session)):
 
 
 @router.get("/activity/feed")
-def activity_feed(limit: int = 50, session: Session = Depends(get_session)):
-    events = session.exec(
-        select(AuditEvent).order_by(AuditEvent.timestamp.desc()).limit(min(limit, 200))
-    ).all()
-    return [event_to_dict(e) for e in events]
+def activity_feed(
+    limit: int = 50,
+    since_id: int | None = None,
+    before_id: int | None = None,
+    session: Session = Depends(get_session),
+):
+    """Always returns newest-first. Cursors are mutually exclusive:
+      - since_id: events after this id — the dashboard's poll uses this to fetch only
+        what's new since its last-seen event and prepend, instead of re-fetching (and
+        re-rendering) the same top-N window every 2s.
+      - before_id: events before this id — "load older" when the feed's scroll region
+        is paged back, so history beyond the initial window is still reachable instead
+        of being clipped off by the fixed-height scroll container.
+    `id` (not timestamp) is the cursor: AuditEvent.id is an autoincrementing PK assigned
+    in insertion order, which already matches chronological order (log_event always
+    writes in real time) — a strictly-increasing integer sidesteps the tie-breaking a
+    millisecond-resolution timestamp cursor would need under concurrent writes.
+
+    has_more is only meaningful for before_id (is there older history beyond this page)
+    and since_id (did more than `limit` events land between two polls, i.e. a burst the
+    client should know it might not have fully caught up on) — always false for a bare,
+    cursor-less fetch.
+    """
+    if since_id is not None and before_id is not None:
+        raise HTTPException(status_code=400, detail="pass only one of since_id or before_id")
+
+    capped_limit = min(limit, 200)
+    query = select(AuditEvent)
+    if since_id is not None:
+        query = query.where(AuditEvent.id > since_id)
+    elif before_id is not None:
+        query = query.where(AuditEvent.id < before_id)
+
+    # Fetch one extra row to know whether more exist beyond this page, without a
+    # separate COUNT query.
+    rows = session.exec(query.order_by(AuditEvent.id.desc()).limit(capped_limit + 1)).all()
+    has_more = len(rows) > capped_limit
+    return {"events": [event_to_dict(e) for e in rows[:capped_limit]], "has_more": has_more}

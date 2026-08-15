@@ -15,7 +15,12 @@ async function request(path, options = {}) {
 
 export const api = {
   products: () => request("/products"),
-  activityFeed: (limit = 50) => request(`/activity/feed?limit=${limit}`),
+  activityFeed: ({ limit = 50, sinceId, beforeId } = {}) => {
+    const params = new URLSearchParams({ limit });
+    if (sinceId != null) params.set("since_id", sinceId);
+    if (beforeId != null) params.set("before_id", beforeId);
+    return request(`/activity/feed?${params}`);
+  },
   orders: () => request("/merchant/orders"),
   agents: () => request("/merchant/agents"),
   rules: () => request("/merchant/rules"),
