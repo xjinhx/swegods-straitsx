@@ -79,7 +79,15 @@ async function loadSeries() {
   }
 }
 
-watch(candidates, loadSeries, { immediate: true, deep: false });
+// Key on the actual selected order IDs, not the `candidates` array reference itself --
+// MerchantDashboard polls every 2.5s and hands down a fresh orders/agents array each
+// time even when nothing changed, which made `candidates` recompute to a new (but
+// equivalent) array on every tick and re-triggered loadSeries constantly. That flipped
+// `loading` on and off every poll, collapsing the chart down to the one-line "Loading
+// trajectories..." text and back, which shunted the panels below it up and down --
+// looked like the chart was flickering into the Live Activity panel underneath it.
+const candidateKey = computed(() => candidates.value.map((c) => c.order.order_id).join(","));
+watch(candidateKey, loadSeries, { immediate: true });
 
 function linePoints(series) {
   return series.points.map((p) => `${p.x},${p.y}`).join(" ");
