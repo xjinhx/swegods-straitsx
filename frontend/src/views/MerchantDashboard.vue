@@ -25,7 +25,7 @@ const activeIndex = computed(() => {
   return STAGES.findIndex((s) => s.matches.includes(recentEvents.value[0].step));
 });
 
-const cmd = 'python agent.py "buy me a birthday gift under $50"';
+const cmd = "python agent.py 'buy me a birthday gift under $50'";
 function copyCmd() {
   navigator.clipboard?.writeText(cmd);
   copied.value = true;
