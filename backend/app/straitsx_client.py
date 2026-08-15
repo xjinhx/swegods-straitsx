@@ -27,15 +27,17 @@ from app.config import (
     MAX_CARD_AMOUNT_SGD,
     MIN_CARD_AMOUNT_SGD,
     MOCK_STRAITSX,
+    STRAITSX_PROFILE,
     STRAITSX_PRODUCTION_CARDAPI,
     STRAITSX_PRODUCTION_SSE,
-    STRAITSX_PROFILE,
     STRAITSX_SANDBOX_CARDAPI,
     STRAITSX_SANDBOX_SSE,
     STRAITSX_WALLET_ADDRESS,
     STRAITSX_WALLET_PRIVATE_KEY,
     XSGD_ADDRESS_PRODUCTION,
     XSGD_ADDRESS_SANDBOX,
+    XSGD_CHAIN_ID_PRODUCTION,
+    XSGD_CHAIN_ID_SANDBOX,
 )
 
 
@@ -59,6 +61,7 @@ class StraitsXCardClient:
         self.sse_url = STRAITSX_SANDBOX_SSE if profile == "sandbox" else STRAITSX_PRODUCTION_SSE
         self.cardapi_url = STRAITSX_SANDBOX_CARDAPI if profile == "sandbox" else STRAITSX_PRODUCTION_CARDAPI
         self.asset_address = XSGD_ADDRESS_SANDBOX if profile == "sandbox" else XSGD_ADDRESS_PRODUCTION
+        self.chain_id = XSGD_CHAIN_ID_SANDBOX if profile == "sandbox" else XSGD_CHAIN_ID_PRODUCTION
         self.wallet_address = STRAITSX_WALLET_ADDRESS
         self.wallet_private_key = STRAITSX_WALLET_PRIVATE_KEY
 
@@ -145,13 +148,33 @@ class StraitsXCardClient:
                 ) from exc
 
     def _sign_payment(self, requirement: dict) -> str:
-        """Build and sign the EIP-3009 TransferWithAuthorization for one x402 `accepts` entry."""
+        """Build and sign the EIP-3009 TransferWithAuthorization for one x402 `accepts` entry.
+
+        Reconciles the challenge's asset/chainId against the active profile's expected
+        XSGD config before signing anything — otherwise we'd blindly sign whatever the
+        server claims, with no client-side guarantee it's actually paying on the network
+        (sandbox vs. production) we think we're on. This matters most for production:
+        a mismatch there would mean signing a real-value transfer on the wrong say-so.
+        """
         extra = requirement.get("extra", {})
         pay_to = to_checksum_address(requirement["payTo"])
         asset = to_checksum_address(requirement["asset"])
         payer = to_checksum_address(self.wallet_address)
         value = int(requirement["amount"])
         chain_id = int(requirement["chainId"])
+
+        expected_asset = to_checksum_address(self.asset_address)
+        if asset != expected_asset:
+            raise StraitsXError(
+                f"x402 challenge asset {asset} does not match {self.profile} XSGD "
+                f"{expected_asset} — refusing to sign"
+            )
+        if chain_id != self.chain_id:
+            raise StraitsXError(
+                f"x402 challenge chainId {chain_id} does not match {self.profile} chain "
+                f"{self.chain_id} — refusing to sign"
+            )
+
         valid_before = int(time.time()) + int(requirement.get("maxTimeoutSeconds", 300))
         nonce = secrets.token_bytes(32)
 
