@@ -3,19 +3,25 @@
 Mocked by default (MOCK_STRAITSX=true) so the rest of the platform never blocks on
 sandbox access, per Section 9.6's build-order note.
 
-The real flow (confirmed live against the sandbox server, PRD Section 9.2) is not a
-plain MCP tool call — it's an x402 payment challenge on top of a REST endpoint:
-  1. POST {amount_sgd, cardholder_name} to the cardapi URL.
-  2. Server replies 402 with a JSON body describing the required payment (asset,
-     amount, payTo, chainId, EIP-3009 domain name/version).
+The real flow (confirmed live against the sandbox server, PRD Section 9.2) starts with
+an actual MCP tool call, then drops into an x402 payment challenge on top of a REST
+endpoint the tool call points us at:
+  1. Over the card gateway's MCP session (SSE transport), call `get_card_sandbox` /
+     `get_card_prod` with {wallet_address, cardholder_name, amount_sgd}. The tool
+     returns the cardapi URL and body to use — not the card itself.
+  2. POST that body to that URL. Server replies 402 with a JSON body describing the
+     required payment (asset, amount, payTo, chainId, EIP-3009 domain name/version).
   3. Sign an EIP-3009 TransferWithAuthorization for that amount with our wallet key.
-  4. Retry the same POST with a base64-encoded PAYMENT-SIGNATURE header.
+  4. Retry the same POST with a base64-encoded PAYMENT-SIGNATURE header — the encoded
+     payload must echo back the accepted requirement (`"accepted": requirement`), not
+     just the signature, or the server can't resolve the atomic amount it's verifying.
   5. Server returns card_opaque_id / card_html / settlement_tx.
 """
 import base64
 import hashlib
 import json
 import logging
+import re
 import secrets
 import time
 from dataclasses import dataclass
@@ -23,6 +29,8 @@ from dataclasses import dataclass
 import httpx
 from eth_account import Account
 from eth_utils import to_checksum_address
+from mcp import ClientSession
+from mcp.client.sse import sse_client
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +39,7 @@ from app.config import (
     MIN_CARD_AMOUNT_SGD,
     MOCK_STRAITSX,
     STRAITSX_PROFILE,
-    STRAITSX_PRODUCTION_CARDAPI,
     STRAITSX_PRODUCTION_SSE,
-    STRAITSX_SANDBOX_CARDAPI,
     STRAITSX_SANDBOX_SSE,
     STRAITSX_WALLET_ADDRESS,
     STRAITSX_WALLET_PRIVATE_KEY,
@@ -46,6 +52,22 @@ from app.config import (
 
 class StraitsXError(Exception):
     pass
+
+
+def _sanitize_cardholder_name(name: str) -> str:
+    """StraitsX's card issuer requires 2-26 chars, letters and spaces only.
+
+    Agent names (e.g. "test-script-agent") come from `/identify` with no such
+    constraint — a hyphenated or otherwise non-conforming name breaks the issuer's
+    surname/first-name split downstream (confirmed via a direct MCP call: an
+    unsanitized name produced "'{surname}/{first_name}' length (35) must be ... no
+    greater than 26"), so normalize before it ever reaches StraitsX.
+    """
+    cleaned = re.sub(r"[^A-Za-z ]+", " ", name)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    if len(cleaned) < 2:
+        cleaned = "Agent Customer"
+    return cleaned[:26].strip()
 
 
 @dataclass
@@ -62,7 +84,7 @@ class StraitsXCardClient:
         self.mock = mock
         self.profile = profile
         self.sse_url = STRAITSX_SANDBOX_SSE if profile == "sandbox" else STRAITSX_PRODUCTION_SSE
-        self.cardapi_url = STRAITSX_SANDBOX_CARDAPI if profile == "sandbox" else STRAITSX_PRODUCTION_CARDAPI
+        self.mcp_tool_name = "get_card_sandbox" if profile == "sandbox" else "get_card_prod"
         self.asset_address = XSGD_ADDRESS_SANDBOX if profile == "sandbox" else XSGD_ADDRESS_PRODUCTION
         self.chain_id = XSGD_CHAIN_ID_SANDBOX if profile == "sandbox" else XSGD_CHAIN_ID_PRODUCTION
         self.wallet_address = STRAITSX_WALLET_ADDRESS
@@ -90,7 +112,7 @@ class StraitsXCardClient:
         )
 
     async def _real_issue_card(self, amount_sgd: float, cardholder_name: str, order_id: str) -> CardResult:
-        """Pay the x402 challenge and issue a real (sandbox or production) card.
+        """Call the card gateway's MCP tool, then pay the x402 challenge it points at.
 
         See module docstring for the flow. Field names on the success response
         (card_opaque_id / card_html / settlement_tx) come from StraitsX's own tool
@@ -103,14 +125,11 @@ class StraitsXCardClient:
                 "backend/.env — required to sign the EIP-3009 payment authorization."
             )
 
-        body = {
-            "amount_sgd": amount_sgd,
-            "cardholder_name": cardholder_name,
-            "wallet_address": self.wallet_address,
-        }
+        cardholder_name = _sanitize_cardholder_name(cardholder_name)
+        cardapi_url, body = await self._mcp_get_card_instructions(amount_sgd, cardholder_name)
 
         async with httpx.AsyncClient(timeout=30) as client:
-            challenge_resp = await client.post(self.cardapi_url, json=body)
+            challenge_resp = await client.post(cardapi_url, json=body)
             if challenge_resp.status_code != 402:
                 raise StraitsXError(
                     f"expected HTTP 402 payment challenge, got {challenge_resp.status_code}: "
@@ -134,7 +153,7 @@ class StraitsXCardClient:
             payment_header = self._sign_payment(requirement)
 
             paid_resp = await client.post(
-                self.cardapi_url,
+                cardapi_url,
                 json=body,
                 headers={"PAYMENT-SIGNATURE": payment_header},
             )
@@ -157,6 +176,32 @@ class StraitsXCardClient:
                 raise StraitsXError(
                     f"card issued but response shape unexpected, missing {exc}: {result}"
                 ) from exc
+
+    async def _mcp_get_card_instructions(self, amount_sgd: float, cardholder_name: str) -> tuple[str, dict]:
+        """Ask the card gateway's MCP server (SSE transport) where and what to POST.
+
+        `get_card_sandbox` / `get_card_prod` don't issue the card themselves — they
+        return the cardapi URL and the exact body to send it, which we then drive
+        through the x402 challenge/pay/retry dance in `_real_issue_card`.
+        """
+        async with sse_client(self.sse_url) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                tool_result = await session.call_tool(self.mcp_tool_name, {
+                    "wallet_address": self.wallet_address,
+                    "cardholder_name": cardholder_name,
+                    "amount_sgd": amount_sgd,
+                })
+                if tool_result.is_error:
+                    raise StraitsXError(f"MCP {self.mcp_tool_name} call failed: {tool_result.content}")
+                instructions = json.loads(tool_result.content[0].text)
+
+        try:
+            return instructions["url"], instructions["body"]
+        except KeyError as exc:
+            raise StraitsXError(
+                f"MCP {self.mcp_tool_name} response missing {exc}: {instructions}"
+            ) from exc
 
     def _sign_payment(self, requirement: dict) -> str:
         """Build and sign the EIP-3009 TransferWithAuthorization for one x402 `accepts` entry.
