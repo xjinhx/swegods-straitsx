@@ -40,7 +40,12 @@ def identify(payload: IdentifyRequest, session: Session = Depends(get_session)):
         issuer=payload.issuer,
         identify_count_in_window=identify_count_in_window,
     )
-    session_token = issue_session_token(agent_id, payload.mandate.expiry_hours)
+    session_token = issue_session_token(
+        agent_id,
+        mandate=payload.mandate.model_dump(),
+        trust=breakdown,
+        expiry_hours=payload.mandate.expiry_hours,
+    )
     credential_valid = breakdown["identity_score"] > 20
 
     if agent is None:

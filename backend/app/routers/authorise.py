@@ -5,7 +5,7 @@ from sqlmodel import Session
 
 from app.audit import log_event
 from app.database import get_session
-from app.deps import get_agent_from_token
+from app.deps import get_agent_session
 from app.models import Order
 from app.schemas import AuthoriseRequest, AuthoriseResponse
 from app.security import sign_receipt
@@ -18,7 +18,7 @@ ALLOWED_STATUSES = {"approved", "approved_override"}
 
 @router.post("/authorise", response_model=AuthoriseResponse)
 async def authorise(payload: AuthoriseRequest, session: Session = Depends(get_session)):
-    agent = get_agent_from_token(session, payload.session_token)
+    agent = get_agent_session(session, payload.session_token).agent
 
     order = session.get(Order, payload.order_id)
     if not order or order.agent_id != agent.agent_id:
