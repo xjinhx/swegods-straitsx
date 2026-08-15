@@ -23,5 +23,7 @@ export const api = {
   deleteRule: (id) => request(`/merchant/rules/${id}`, { method: "DELETE" }),
   override: (orderId, note) =>
     request(`/merchant/orders/${orderId}/override`, { method: "POST", body: JSON.stringify({ note }) }),
+  revokeAgent: (agentId) => request(`/merchant/agents/${agentId}/revoke`, { method: "POST" }),
+  reinstateAgent: (agentId) => request(`/merchant/agents/${agentId}/reinstate`, { method: "POST" }),
   orderAudit: (orderId) => request(`/audit/${orderId}`),
 };

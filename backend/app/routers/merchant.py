@@ -2,6 +2,7 @@
 agent's). Reuses data the core flow already generates; the rule builder is the only
 place with new state (MerchantRule rows that /checkout reads from, see app/rules.py)."""
 import json
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
@@ -63,8 +64,43 @@ def list_agents(session: Session = Depends(get_session)):
             "merchant_whitelist": a.merchant_whitelist,
             "identify_count": a.identify_count,
             "last_identify_at": a.last_identify_at.isoformat() + "Z",
+            "key_active": a.key_active,
+            "key_revoked_at": a.key_revoked_at.isoformat() + "Z" if a.key_revoked_at else None,
         })
     return out
+
+
+@router.post("/agents/{agent_id}/revoke")
+def revoke_agent(agent_id: str, session: Session = Depends(get_session)):
+    """Instant revocation: flips a live flag checked on every request (deps.py), not
+    certificate expiry/CRL. The agent's current session token stays signature-valid
+    but stops being accepted on its very next request."""
+    agent = session.get(Agent, agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="agent not found")
+
+    agent.key_active = False
+    agent.key_revoked_at = datetime.utcnow()
+    session.add(agent)
+    session.commit()
+
+    log_event(session, step="revoke", message=f'Merchant revoked credential for "{agent.name}"', agent_id=agent_id)
+    return {"agent_id": agent_id, "key_active": False, "key_revoked_at": agent.key_revoked_at.isoformat() + "Z"}
+
+
+@router.post("/agents/{agent_id}/reinstate")
+def reinstate_agent(agent_id: str, session: Session = Depends(get_session)):
+    agent = session.get(Agent, agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="agent not found")
+
+    agent.key_active = True
+    agent.key_revoked_at = None
+    session.add(agent)
+    session.commit()
+
+    log_event(session, step="reinstate", message=f'Merchant reinstated credential for "{agent.name}"', agent_id=agent_id)
+    return {"agent_id": agent_id, "key_active": True}
 
 
 @router.get("/orders", response_model=list[OrderOut])
@@ -76,7 +112,7 @@ def list_orders(session: Session = Depends(get_session)):
         out.append(OrderOut(
             order_id=o.order_id, agent_id=o.agent_id, agent_name=agent.name if agent else "unknown",
             sku=o.sku, product_name=o.product_name, category=o.category, amount_sgd=o.amount_sgd,
-            status=o.status, reason=o.reason, trust_score_at_checkout=o.trust_score_at_checkout,
+            status=o.status, reason=o.reason, denial_reason=o.denial_reason, trust_score_at_checkout=o.trust_score_at_checkout,
             required_trust=o.required_trust, commercial_validity_score=o.commercial_validity_score,
             settlement_tx=o.settlement_tx, created_at=o.created_at.isoformat() + "Z",
         ))

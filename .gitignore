@@ -6,6 +6,7 @@ __pycache__/
 
 # env
 .env
+issuer_private_key.pem
 
 # Node
 node_modules/

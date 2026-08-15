@@ -2,6 +2,7 @@
 import { computed } from "vue";
 
 const props = defineProps({ agent: { type: Object, required: true } });
+const emit = defineEmits(["revoke", "reinstate"]);
 
 const ALL_ROWS = [
   { key: "mandate_scope_score", label: "Mandate scope" },
@@ -13,6 +14,15 @@ const ALL_ROWS = [
 // reputation_score is null for a brand-new agent with no resolved order history yet —
 // omit the row entirely rather than showing a misleading 0.
 const rows = computed(() => ALL_ROWS.filter((r) => props.agent[r.key] !== undefined && props.agent[r.key] !== null));
+
+function relTime(iso) {
+  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 5) return "just now";
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  return `${Math.floor(m / 60)}h ago`;
+}
 </script>
 
 <template>
@@ -37,6 +47,15 @@ const rows = computed(() => ALL_ROWS.filter((r) => props.agent[r.key] !== undefi
       </div>
     </div>
     <p v-if="agent.reputation_orders" class="reputation-note">{{ agent.reputation_orders }} (Wilson score, 95% CI)</p>
+    <div class="revocation-row">
+      <button v-if="agent.key_active" class="revoke-btn" @click="emit('revoke', agent.agent_id)">
+        Revoke credential
+      </button>
+      <template v-else>
+        <span class="revoked-badge">Revoked {{ relTime(agent.key_revoked_at) }}</span>
+        <button class="reinstate-btn" @click="emit('reinstate', agent.agent_id)">Reinstate</button>
+      </template>
+    </div>
   </div>
 </template>
 
@@ -55,4 +74,9 @@ const rows = computed(() => ALL_ROWS.filter((r) => props.agent[r.key] !== undefi
 .bar-fill { height: 100%; background: var(--accent); border-radius: 999px; }
 .bar-value { font-size: 0.8rem; text-align: right; color: var(--ink-muted); }
 .reputation-note { margin: 0; font-size: 0.74rem; color: var(--ink-faint); font-family: var(--mono); }
+.revocation-row { display: flex; align-items: center; gap: 0.6rem; }
+.revoke-btn { border-color: var(--warn); color: var(--warn); }
+.revoke-btn:hover { background: var(--warn-soft); }
+.revoked-badge { font-size: 0.78rem; font-weight: 600; color: var(--warn); background: var(--warn-soft); padding: 0.3rem 0.6rem; border-radius: 999px; }
+.reinstate-btn { font-size: 0.8rem; }
 </style>

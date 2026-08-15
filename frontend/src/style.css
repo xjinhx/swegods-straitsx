@@ -1,73 +1,91 @@
 @font-face {
-  font-family: "Helvetica Now Display";
-  src: url("./assets/fonts/HelveticaNowDisplay-Regular.ttf") format("truetype");
+  font-family: "Plex Sans";
+  src: url("./assets/fonts/IBMPlexSans-Variable.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Plex Mono";
+  src: url("./assets/fonts/IBMPlexMono-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: "Helvetica Now Display";
-  src: url("./assets/fonts/HelveticaNowDisplay-RegIta.ttf") format("truetype");
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Helvetica Now Display";
-  src: url("./assets/fonts/HelveticaNowDisplay-Medium.ttf") format("truetype");
+  font-family: "Plex Mono";
+  src: url("./assets/fonts/IBMPlexMono-Medium.woff2") format("woff2");
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: "Helvetica Now Display";
-  src: url("./assets/fonts/HelveticaNowDisplay-Bold.ttf") format("truetype");
-  font-weight: 700;
+  font-family: "Plex Mono";
+  src: url("./assets/fonts/IBMPlexMono-SemiBold.woff2") format("woff2");
+  font-weight: 600;
   font-style: normal;
   font-display: swap;
 }
 
+/* Ledger-and-instrument-panel palette: deep ultramarine ink accent (distinct from
+   StraitsX's teal and Avalanche's red — this isn't either sponsor's brand), cool
+   paper neutrals instead of default gray. See scratchpad "Trust Ledger" design
+   preview for the full rationale. */
 :root {
-  --paper: #F6F7F9;
+  --paper: #ECEEF3;
   --surface: #FFFFFF;
-  --surface-2: #EEF1F4;
+  --surface-2: #F3F4F8;
   --ink: #14171F;
-  --ink-muted: #5B6472;
-  --ink-faint: #8A93A3;
-  --accent: #0B7285;
-  --accent-ink: #075A69;
-  --accent-soft: #E3F1F2;
-  --warn: #A6650A;
-  --warn-soft: #FBF0DD;
-  --good: #2F8F4E;
-  --good-soft: #E6F4EA;
+  --ink-muted: #5B6272;
+  --ink-faint: #8991A3;
+  --accent: #2E3EB8;
+  --accent-ink: #24309A;
+  --accent-soft: #E3E5FA;
+  --warn: #B8621A;
+  --warn-soft: #FBEBDA;
+  --good: #1F8A5F;
+  --good-soft: #DEF3E9;
   --bad: #C23B3B;
-  --bad-soft: #FBE9E9;
-  --line: #E2E5EA;
-  --line-strong: #C9CFD8;
-  --mono: ui-monospace, "Cascadia Mono", "Cascadia Code", "SF Mono", Consolas, monospace;
-  --sans: "Helvetica Now Display", -apple-system, "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --bad-soft: #FBE2E2;
+  --line: #D8DBE3;
+  --line-strong: #C2C6D2;
+  /* Categorical, validated against these surfaces (see dataviz skill's validator) —
+     reserved for the blocked-reasons breakdown, not reused as a semantic status. */
+  --reason-1: #EDA100;
+  --reason-2: #4A3AA7;
+  --reason-3: #0089A3;
+  --chart-1: #2A78D6;
+  --chart-2: #EB6834;
+  --chart-3: #1BAF7A;
+  --mono: "Plex Mono", ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+  --sans: "Plex Sans", -apple-system, "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #0C0F14;
-    --surface: #131720;
-    --surface-2: #1A1F29;
-    --ink: #E7EAF0;
-    --ink-muted: #97A0B2;
-    --ink-faint: #626B7C;
-    --accent: #35C9BC;
-    --accent-ink: #7FE3D9;
-    --accent-soft: rgba(53, 201, 188, 0.12);
-    --warn: #E3A63F;
-    --warn-soft: rgba(227, 166, 63, 0.12);
-    --good: #57C77E;
-    --good-soft: rgba(87, 199, 126, 0.12);
-    --bad: #E1685F;
-    --bad-soft: rgba(225, 104, 95, 0.12);
-    --line: #262C38;
-    --line-strong: #333B49;
+    --paper: #101218;
+    --surface: #171A22;
+    --surface-2: #1D212B;
+    --ink: #ECEEF4;
+    --ink-muted: #A4ABBD;
+    --ink-faint: #6B7386;
+    --accent: #8891EC;
+    --accent-ink: #AAB0F2;
+    --accent-soft: #262C56;
+    --warn: #E0954F;
+    --warn-soft: #3A2917;
+    --good: #4CBF8E;
+    --good-soft: #16332A;
+    --bad: #E37272;
+    --bad-soft: #3A1E1E;
+    --line: #2A2E3A;
+    --line-strong: #3A3F4E;
+    --reason-1: #C98500;
+    --reason-2: #9085E9;
+    --reason-3: #2CA0B8;
+    --chart-1: #3987E5;
+    --chart-2: #D95926;
+    --chart-3: #199E70;
   }
 }
 

@@ -54,6 +54,18 @@ AUTHORISE_PAYMENT_WEIGHT = 0.30
 # a high identity/mandate score can't buy back a checkout whose contents don't check out.
 COMMERCIAL_VALIDITY_GATE = 50.0
 
+# Same idea, mirrored onto identity: without it, identity_score is just 30% of the
+# checkout blend (blend_checkout_score), and a fresh agent with no price assertion
+# already gets commercial_validity_score=100 and behavior_score=100 "for free" — 45
+# points that have nothing to do with who's asking. That floor clears the highest
+# price tier's required_trust (65) even for a credential that fails the shape check
+# entirely (score_identity's floor of 20), as long as the mandate looks disciplined.
+# A gate below 70 would also block real-but-untrusted-issuer credentials (score 70),
+# which is a legitimate case, not a forged one — so this sits strictly between
+# score_identity's 20 (doesn't look signed) and 70 (looks signed, unknown issuer),
+# mirroring COMMERCIAL_VALIDITY_GATE's placement between its own 20/100 outcomes.
+IDENTITY_GATE = 50.0
+
 # Issuers we recognise as reputable for demo purposes (Section 7: "issuer reputation
 # if available"). Anything else still passes signature-shape validation but scores lower.
 TRUSTED_ISSUERS = {"demo-agent-v1", "claude-agent-sdk", "agentmart-reference-agent"}
