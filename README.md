@@ -2,7 +2,7 @@
 
 An AI agent just showed up to buy something. It has no face, no history with you, and nobody standing behind it to check its ID. Do you sell to it? AgentMart is a merchant built to answer that question in real time, not dodge it: there's no login form and no checkout button, because there's no human on the other end. An agent presents credentials, gets back a live, five-factor trust score, and the merchant's own configurable rules decide, in real time, whether the purchase goes through. Every purchase that clears settles in real $XSGD on Avalanche C-Chain mainnet.
 
-![AgentMart system architecture: a human prompts a Claude agent, which calls the AgentMart API for trust scoring, merchant rules, and the identify/checkout/authorise/receipt flow; the API authorises through the StraitsX card API using the x402 challenge protocol and an EIP-3009 signed transfer, which settles on-chain in XSGD on Avalanche C-Chain; every step is logged to an append-only audit log, which updates the merchant dashboard, and a human can override a blocked order from that dashboard.](AgentMart_Diagram3.png)
+![AgentMart system architecture: a human prompts a Claude agent, which calls the AgentMart API for trust scoring, merchant rules, and the identify/checkout/authorise/receipt flow; the API authorises through the StraitsX card API using the x402 challenge protocol and an EIP-3009 signed transfer, which settles on-chain in XSGD on Avalanche C-Chain; every step is logged to an append-only audit log, which updates the merchant dashboard, and a human can override a blocked order from that dashboard.](AgentMart_Diagram.png)
 
 ## Why AgentMart: AI-native Commerce (Track 3)
 
